@@ -1,0 +1,343 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import {
+  PPE_EVENTS,
+  PPE_EVENT_PRICES,
+  ALL_PPE_EVENTS,
+  PpeEventEmitter,
+  type PPEEventType,
+  ActorInputSchema,
+  runActor,
+} from '../src/index.js';
+import {
+  MemoryAlertStorage,
+  parseSafetyGateFileSync,
+  normalizeAlerts,
+} from '@productsafetyengine/core';
+
+const ACTOR_DIR = path.resolve(__dirname, '..');
+const REPO_ROOT = path.resolve(ACTOR_DIR, '../..');
+const FIXTURE_PATH = path.resolve(REPO_ROOT, 'fixtures/safety_gate_2026_45.xml');
+
+describe('F07: Apify Actor Struktur & Konfiguration', () => {
+  describe('Akzeptanzkriterium 1: Valide Apify-Actor Metadaten (.actor/actor.json mit Node 22)', () => {
+    const actorJsonPath = path.join(ACTOR_DIR, '.actor/actor.json');
+
+    it('existiert am Pfad apps/actor/.actor/actor.json', () => {
+      expect(fs.existsSync(actorJsonPath)).toBe(true);
+    });
+
+    it('ist valides JSON und entspricht der Apify Actor Specification 1', () => {
+      const content = fs.readFileSync(actorJsonPath, 'utf-8');
+      const data = JSON.parse(content);
+
+      expect(data).toBeTypeOf('object');
+      expect(data.actorSpecification).toBe(1);
+      expect(data.name).toBeTypeOf('string');
+      expect(data.name.length).toBeGreaterThan(0);
+      expect(data.title).toBeTypeOf('string');
+      expect(data.description).toBeTypeOf('string');
+      expect(data.version).toBeTypeOf('string');
+    });
+
+    it('konfiguriert Node 22 als Runtime-Umgebung', () => {
+      const content = fs.readFileSync(actorJsonPath, 'utf-8');
+      const data = JSON.parse(content);
+
+      // Node 22 in environmentVariables oder nodeVersion definiert
+      const envNodeVersion = data.environmentVariables?.NODE_VERSION;
+      const directNodeVersion = data.nodeVersion;
+      const isNode22 = envNodeVersion === '22' || envNodeVersion === 22 || directNodeVersion === '22';
+
+      // Zusaetzlich Pruefung des referenzierten Dockerfile
+      const dockerfilePath = path.join(ACTOR_DIR, '.actor/Dockerfile');
+      const dockerfileContent = fs.existsSync(dockerfilePath)
+        ? fs.readFileSync(dockerfilePath, 'utf-8')
+        : '';
+      const dockerfileHasNode22 = dockerfileContent.includes('22');
+
+      expect(isNode22 || dockerfileHasNode22).toBe(true);
+      expect(envNodeVersion === '22' || directNodeVersion === '22').toBe(true);
+    });
+
+    it('referenziert existierende Input- und Dataset-Schemas', () => {
+      const content = fs.readFileSync(actorJsonPath, 'utf-8');
+      const data = JSON.parse(content);
+
+      expect(data.input).toBe('./input_schema.json');
+      const resolvedInputPath = path.resolve(path.dirname(actorJsonPath), data.input);
+      expect(fs.existsSync(resolvedInputPath)).toBe(true);
+
+      expect(data.storages?.dataset).toBe('./dataset_schema.json');
+      const resolvedDatasetPath = path.resolve(path.dirname(actorJsonPath), data.storages.dataset);
+      expect(fs.existsSync(resolvedDatasetPath)).toBe(true);
+    });
+  });
+
+  describe('Akzeptanzkriterium 2: Input-Schema mit Filtern (EAN, Kategorie, Suchbegriff, Woche)', () => {
+    const inputSchemaPath = path.join(ACTOR_DIR, '.actor/input_schema.json');
+
+    it('existiert und ist valides JSON-Schema gemaess Apify Specification', () => {
+      expect(fs.existsSync(inputSchemaPath)).toBe(true);
+      const data = JSON.parse(fs.readFileSync(inputSchemaPath, 'utf-8'));
+
+      expect(data.schemaVersion).toBe(1);
+      expect(data.type).toBe('object');
+      expect(data.properties).toBeTypeOf('object');
+    });
+
+    it('enthaelt Filter fuer EAN, Kategorie, Suchbegriff und Woche', () => {
+      const data = JSON.parse(fs.readFileSync(inputSchemaPath, 'utf-8'));
+      const props = data.properties;
+
+      // Filter 1: EAN / Barcode
+      expect(props.ean).toBeDefined();
+      expect(props.ean.type).toBe('string');
+      expect(props.ean.title.toLowerCase()).toContain('ean');
+
+      // Filter 2: Kategorie / Category
+      expect(props.category).toBeDefined();
+      expect(props.category.type).toBe('string');
+      expect(props.category.title.toLowerCase()).toMatch(/kategorie|category/);
+
+      // Filter 3: Suchbegriff / Query
+      expect(props.query).toBeDefined();
+      expect(props.query.type).toBe('string');
+      expect(props.query.title.toLowerCase()).toMatch(/suchbegriff|search|query/);
+
+      // Filter 4: Woche / Week
+      expect(props.week).toBeDefined();
+      expect(props.week.type).toBe('string');
+      expect(props.week.title.toLowerCase()).toMatch(/woche|week/);
+
+      // Optional/Konfigurierbar: maxItems
+      expect(props.maxItems).toBeDefined();
+      expect(props.maxItems.type).toBe('integer');
+    });
+
+    it('stellt dataset_schema.json in apps/actor/ bereit', () => {
+      const datasetPath = path.join(ACTOR_DIR, 'dataset_schema.json');
+      expect(fs.existsSync(datasetPath)).toBe(true);
+
+      const dataset = JSON.parse(fs.readFileSync(datasetPath, 'utf-8'));
+      expect(dataset.type).toBe('object');
+      expect(dataset.properties.alert_number).toBeDefined();
+      expect(dataset.properties.category).toBeDefined();
+      expect(dataset.properties.product).toBeDefined();
+      expect(dataset.properties.ean_barcodes).toBeDefined();
+      expect(dataset.properties.risk_type).toBeDefined();
+    });
+
+    it('validiert und normalisiert ActorInput via Zod-Schema inkl. Aliassen', () => {
+      const parsed1 = ActorInputSchema.parse({
+        ean: ' 5054298241091 ',
+        category: ' Toys ',
+        query: ' wooden puzzle ',
+        week: ' 2026-W45 ',
+        maxItems: 50,
+      });
+
+      expect(parsed1.ean).toBe('5054298241091');
+      expect(parsed1.category).toBe('Toys');
+      expect(parsed1.query).toBe('wooden puzzle');
+      expect(parsed1.week).toBe('2026-W45');
+      expect(parsed1.maxItems).toBe(50);
+
+      // Aliase fuer Suchbegriff (suchbegriff / searchTerm) und Woche (woche)
+      const parsedAliases = ActorInputSchema.parse({
+        suchbegriff: 'Puppenwagen',
+        woche: '45',
+      });
+      expect(parsedAliases.query).toBe('Puppenwagen');
+      expect(parsedAliases.week).toBe('45');
+      expect(parsedAliases.maxItems).toBe(100); // Default
+    });
+  });
+
+  describe('Akzeptanzkriterium 3: PPE-Ereignisse im Code als exportierte Typen/Konstanten definiert', () => {
+    it('definiert und exportiert die geforderten PPE-Konstanten ean-checked und alert-returned', () => {
+      expect(PPE_EVENTS.EAN_CHECKED).toBe('ean-checked');
+      expect(PPE_EVENTS.ALERT_RETURNED).toBe('alert-returned');
+      expect(PPE_EVENTS.QUERY_EXECUTED).toBe('query-executed');
+      expect(PPE_EVENTS.WEEKLY_MONITORED).toBe('weekly-monitored');
+
+      expect(ALL_PPE_EVENTS).toContain('ean-checked');
+      expect(ALL_PPE_EVENTS).toContain('alert-returned');
+    });
+
+    it('definiert faire Pay-Per-Event Standard-Preise in USD', () => {
+      expect(PPE_EVENT_PRICES['ean-checked']).toBe(0.005);
+      expect(PPE_EVENT_PRICES['alert-returned']).toBe(0.010);
+      expect(PPE_EVENT_PRICES['query-executed']).toBe(0.002);
+      expect(PPE_EVENT_PRICES['weekly-monitored']).toBe(0.020);
+    });
+
+    describe('PpeEventEmitter', () => {
+      let emitter: PpeEventEmitter;
+
+      beforeEach(() => {
+        emitter = new PpeEventEmitter();
+      });
+
+      it('loest typisierte Ereignisse aus und ruft registrierte Listener auf', () => {
+        const eanListener = vi.fn();
+        const alertListener = vi.fn();
+
+        emitter.on(PPE_EVENTS.EAN_CHECKED, eanListener);
+        emitter.on(PPE_EVENTS.ALERT_RETURNED, alertListener);
+
+        emitter.emitEanChecked({
+          ean: '5054298241091',
+          validGtin: true,
+          matchCount: 1,
+        });
+
+        emitter.emitAlertReturned({
+          alertNumber: 'A12/00001/26',
+          product: 'Toy Car',
+          category: 'Toys',
+        });
+
+        expect(eanListener).toHaveBeenCalledTimes(1);
+        expect(eanListener).toHaveBeenCalledWith(
+          expect.objectContaining({
+            ean: '5054298241091',
+            validGtin: true,
+            matchCount: 1,
+          })
+        );
+
+        expect(alertListener).toHaveBeenCalledTimes(1);
+        expect(alertListener).toHaveBeenCalledWith(
+          expect.objectContaining({
+            alertNumber: 'A12/00001/26',
+            product: 'Toy Car',
+          })
+        );
+      });
+
+      it('zaehlt Events und berechnet geschaetzte PPE-Kosten korrekt', () => {
+        emitter.emitEanChecked({ ean: '5054298241091', validGtin: true, matchCount: 1 });
+        emitter.emitEanChecked({ ean: '4099979071513', validGtin: true, matchCount: 0 });
+        emitter.emitAlertReturned({ alertNumber: 'A12/00001/26' });
+        emitter.emitAlertReturned({ alertNumber: 'A12/00002/26' });
+        emitter.emitAlertReturned({ alertNumber: 'A12/00003/26' });
+        emitter.emitQueryExecuted({ query: 'doll', totalMatches: 3 });
+
+        expect(emitter.getEventCount(PPE_EVENTS.EAN_CHECKED)).toBe(2);
+        expect(emitter.getEventCount(PPE_EVENTS.ALERT_RETURNED)).toBe(3);
+        expect(emitter.getEventCount(PPE_EVENTS.QUERY_EXECUTED)).toBe(1);
+        expect(emitter.getTotalEvents()).toBe(6);
+
+        // Kosten: (2 * $0.005) + (3 * $0.010) + (1 * $0.002) = 0.01 + 0.03 + 0.002 = 0.042 USD
+        expect(emitter.calculateEstimatedCost()).toBe(0.042);
+
+        const breakdown = emitter.getCostBreakdown();
+        expect(breakdown['ean-checked'].count).toBe(2);
+        expect(breakdown['ean-checked'].totalCostUsd).toBe(0.01);
+        expect(breakdown['alert-returned'].count).toBe(3);
+        expect(breakdown['alert-returned'].totalCostUsd).toBe(0.03);
+      });
+
+      it('unterstuetzt Apify ChargeHandler Callback Integration', () => {
+        const chargeMock = vi.fn();
+        const chargedEmitter = new PpeEventEmitter({ chargeHandler: chargeMock });
+
+        chargedEmitter.emitEanChecked({ ean: '5054298241091', validGtin: true, matchCount: 1 });
+        expect(chargeMock).toHaveBeenCalledWith('ean-checked', { count: 1, priceUsd: 0.005 });
+
+        chargedEmitter.emitAlertReturned({ alertNumber: 'A12/00001/26' });
+        expect(chargeMock).toHaveBeenCalledWith('alert-returned', { count: 1, priceUsd: 0.010 });
+      });
+
+      it('zeichnet die Event-Historie auf und unterstuetzt reset()', () => {
+        emitter.emitEanChecked({ ean: '5054298241091', validGtin: true, matchCount: 1 });
+        expect(emitter.getHistory().length).toBe(1);
+        expect(emitter.getHistory()[0].event).toBe('ean-checked');
+
+        emitter.reset();
+        expect(emitter.getHistory().length).toBe(0);
+        expect(emitter.getTotalEvents()).toBe(0);
+        expect(emitter.calculateEstimatedCost()).toBe(0);
+      });
+    });
+  });
+
+  describe('Akzeptanzkriterium 4: Unit-Tests & Integration mit Storage & Fixtures', () => {
+    let storage: MemoryAlertStorage;
+
+    beforeEach(() => {
+      storage = new MemoryAlertStorage();
+      const parsed = parseSafetyGateFileSync(FIXTURE_PATH);
+      const normalized = normalizeAlerts(parsed.notifications);
+      storage.insertAlerts(normalized);
+    });
+
+    it('fuehrt EAN-Pruefung aus und loest ean-checked sowie alert-returned aus', async () => {
+      const emitter = new PpeEventEmitter();
+      const result = await runActor(
+        { ean: '5054298241091' },
+        { storage, emitter }
+      );
+
+      expect(result.items.length).toBeGreaterThanOrEqual(1);
+      expect(result.items.some((i) => i.ean_barcodes.includes('5054298241091'))).toBe(true);
+
+      expect(emitter.getEventCount(PPE_EVENTS.EAN_CHECKED)).toBe(1);
+      expect(emitter.getEventCount(PPE_EVENTS.ALERT_RETURNED)).toBe(result.items.length);
+      expect(result.totalCostUsd).toBeGreaterThan(0);
+    });
+
+    it('loest ean-checked auch bei unbekannter EAN mit 0 Treffern aus', async () => {
+      const emitter = new PpeEventEmitter();
+      const result = await runActor(
+        { ean: '4000000000006' },
+        { storage, emitter }
+      );
+
+      expect(result.items.length).toBe(0);
+      expect(emitter.getEventCount(PPE_EVENTS.EAN_CHECKED)).toBe(1);
+      expect(emitter.getEventCount(PPE_EVENTS.ALERT_RETURNED)).toBe(0);
+    });
+
+    it('filtert nach Kategorie und loest alert-returned fuer alle Treffer aus', async () => {
+      const emitter = new PpeEventEmitter();
+      const result = await runActor(
+        { category: 'Toys' },
+        { storage, emitter }
+      );
+
+      expect(result.items.length).toBeGreaterThan(0);
+      for (const item of result.items) {
+        expect(item.category.toLowerCase()).toContain('toy');
+      }
+
+      expect(emitter.getEventCount(PPE_EVENTS.ALERT_RETURNED)).toBe(result.items.length);
+      expect(emitter.getEventCount(PPE_EVENTS.QUERY_EXECUTED)).toBe(1);
+    });
+
+    it('filtert nach Freitext-Suchbegriff (query)', async () => {
+      const emitter = new PpeEventEmitter();
+      const result = await runActor(
+        { query: 'chemical' },
+        { storage, emitter }
+      );
+
+      expect(result.items.length).toBeGreaterThan(0);
+      expect(emitter.getEventCount(PPE_EVENTS.QUERY_EXECUTED)).toBe(1);
+      expect(emitter.getEventCount(PPE_EVENTS.ALERT_RETURNED)).toBe(result.items.length);
+    });
+
+    it('beachtet das maxItems Limit', async () => {
+      const emitter = new PpeEventEmitter();
+      const result = await runActor(
+        { maxItems: 5 },
+        { storage, emitter }
+      );
+
+      expect(result.items.length).toBe(5);
+      expect(emitter.getEventCount(PPE_EVENTS.ALERT_RETURNED)).toBe(5);
+    });
+  });
+});

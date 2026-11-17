@@ -1,0 +1,40 @@
+{
+  "title": "ProductSafetyEngine Actor Input",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "ean": {
+      "title": "EAN / Barcode",
+      "type": "string",
+      "description": "EAN-8, EAN-13, UPC or GTIN barcode to verify against EU Safety Gate recalls (e.g. 5054298241091).",
+      "editor": "textfield"
+    },
+    "category": {
+      "title": "Category / Kategorie",
+      "type": "string",
+      "description": "Product category to filter alerts (e.g. Toys, Cosmetics, Electrical appliances, Motor vehicles).",
+      "editor": "textfield"
+    },
+    "query": {
+      "title": "Search Query / Suchbegriff",
+      "type": "string",
+      "description": "Free text search term to search across product names, brands, models, and danger descriptions.",
+      "editor": "textfield"
+    },
+    "week": {
+      "title": "Week / Woche",
+      "type": "string",
+      "description": "Publication week filter (e.g. '2026-W45', '2026-45' or '45').",
+      "editor": "textfield"
+    },
+    "maxItems": {
+      "title": "Maximum Items",
+      "type": "integer",
+      "description": "Maximum number of alert items to return in the dataset.",
+      "default": 100,
+      "minimum": 1,
+      "maximum": 5000,
+      "editor": "number"
+    }
+  }
+}
