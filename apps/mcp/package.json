@@ -5,7 +5,8 @@
   "main": "./src/server.ts",
   "types": "./src/server.ts",
   "scripts": {
-    "test": "vitest run"
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.2",
