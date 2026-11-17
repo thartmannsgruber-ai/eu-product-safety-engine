@@ -10,7 +10,9 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import { z } from 'zod';
+import type { IAlertStorage } from '@productsafetyengine/core';
 import { sanitizeInput, detectPromptInjection, NEUTRALIZED_TAG } from './sanitizer.js';
+import { registerTools } from './tools.js';
 
 export const SERVER_NAME = 'productsafetyengine-mcp';
 export const SERVER_VERSION = '1.0.0';
@@ -26,6 +28,7 @@ export interface ServerConfig {
     logging?: Record<string, unknown>;
     [key: string]: unknown;
   };
+  storage?: IAlertStorage;
 }
 
 /**
@@ -88,6 +91,9 @@ export function createMcpServer(config: ServerConfig = {}): McpServer {
     },
   );
 
+  // Registriere die exakt 4 Safety Gate Agenten-Tools
+  registerTools(server, config.storage);
+
   return server;
 }
 
@@ -123,3 +129,4 @@ export async function startServer(config: ServerConfig = {}): Promise<{ server: 
 }
 
 export * from './sanitizer.js';
+export * from './tools.js';

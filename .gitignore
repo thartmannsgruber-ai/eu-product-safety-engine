@@ -3,4 +3,6 @@ dist/
 .aiworker/
 .audit/
 *.lock
+*.tsbuildinfo
+
 
