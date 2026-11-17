@@ -1,0 +1,14 @@
+{
+  "name": "@productsafetyengine/core",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "fast-xml-parser": "^5.12.1",
+    "zod": "^4.6.7"
+  }
+}
