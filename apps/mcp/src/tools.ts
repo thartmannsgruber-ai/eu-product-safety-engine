@@ -16,6 +16,7 @@ import {
   isValidEan,
   MemoryAlertStorage,
   SqliteAlertStorage,
+  EmptyDatabaseError,
   parseYearWeekFromAlert,
 } from '@productsafetyengine/core';
 import { sanitizeInput } from './sanitizer.js';
@@ -221,10 +222,20 @@ export const MonitorWeeklyAlertsSchema = {
 // Handler-Funktionen fuer die 4 Tools
 // ============================================================================
 
+export async function ensureDatabaseReady(storage: IAlertStorage): Promise<void> {
+  const count = await storage.count();
+  if (count === 0) {
+    throw new EmptyDatabaseError(
+      'Safety Gate database is uninitialized (0 records). Ensure autoSeed is active or data is populated.'
+    );
+  }
+}
+
 export async function executeCheckEanSafety(
   args: { ean?: string; barcode?: string },
   storage: IAlertStorage
 ) {
+  await ensureDatabaseReady(storage);
   const rawCode = (args.ean ?? args.barcode ?? '').trim();
   const sanitized = rawCode ? sanitizeInput(rawCode, { maxLength: 100 }) : '';
 
@@ -303,6 +314,7 @@ export async function executeSearchProductRecalls(
   },
   storage: IAlertStorage
 ) {
+  await ensureDatabaseReady(storage);
   const effectiveQuery = (args.query ?? args.searchTerm)?.trim();
   const sanitizedQuery = effectiveQuery ? sanitizeInput(effectiveQuery, { maxLength: 500 }) : undefined;
   const sanitizedCategory = args.category ? sanitizeInput(args.category, { maxLength: 200 }) : undefined;
@@ -357,6 +369,7 @@ export async function executeGetChemicalRestrictions(
   },
   storage: IAlertStorage
 ) {
+  await ensureDatabaseReady(storage);
   const sanitizedSubstance = args.substance ? sanitizeInput(args.substance, { maxLength: 200 }) : undefined;
   const sanitizedCategory = args.category ? sanitizeInput(args.category, { maxLength: 200 }) : undefined;
   const limit = args.limit ?? 20;
@@ -436,6 +449,7 @@ export async function executeMonitorWeeklyAlerts(
   },
   storage: IAlertStorage
 ) {
+  await ensureDatabaseReady(storage);
   let targetYear: string | number | undefined = args.year;
   let targetWeek: string | number | undefined = args.week;
   let isLatestWeek = false;

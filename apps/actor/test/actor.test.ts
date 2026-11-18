@@ -18,6 +18,8 @@ import {
 } from '../src/index.js';
 import {
   MemoryAlertStorage,
+  SqliteAlertStorage,
+  EmptyDatabaseError,
   parseSafetyGateFileSync,
   normalizeAlerts,
 } from '@productsafetyengine/core';
@@ -180,7 +182,7 @@ describe('F07: Apify Actor Struktur & Konfiguration', () => {
 
     it('definiert faire Pay-Per-Event Standard-Preise in USD', () => {
       expect(PPE_EVENT_PRICES['ean-checked']).toBe(0.005);
-      expect(PPE_EVENT_PRICES['alert-returned']).toBe(0.010);
+      expect(PPE_EVENT_PRICES['alert-returned']).toBe(0.0019);
       expect(PPE_EVENT_PRICES['query-executed']).toBe(0.002);
       expect(PPE_EVENT_PRICES['weekly-monitored']).toBe(0.020);
     });
@@ -242,14 +244,14 @@ describe('F07: Apify Actor Struktur & Konfiguration', () => {
         expect(emitter.getEventCount(PPE_EVENTS.QUERY_EXECUTED)).toBe(1);
         expect(emitter.getTotalEvents()).toBe(6);
 
-        // Kosten: (2 * $0.005) + (3 * $0.010) + (1 * $0.002) = 0.01 + 0.03 + 0.002 = 0.042 USD
-        expect(emitter.calculateEstimatedCost()).toBe(0.042);
+        // Kosten: (2 * $0.005) + (3 * $0.0019) + (1 * $0.002) = 0.01 + 0.0057 + 0.002 = 0.0177 USD
+        expect(emitter.calculateEstimatedCost()).toBe(0.0177);
 
         const breakdown = emitter.getCostBreakdown();
         expect(breakdown['ean-checked'].count).toBe(2);
         expect(breakdown['ean-checked'].totalCostUsd).toBe(0.01);
         expect(breakdown['alert-returned'].count).toBe(3);
-        expect(breakdown['alert-returned'].totalCostUsd).toBe(0.03);
+        expect(breakdown['alert-returned'].totalCostUsd).toBe(0.0057);
       });
 
       it('unterstuetzt Apify ChargeHandler Callback Integration', () => {
@@ -260,7 +262,7 @@ describe('F07: Apify Actor Struktur & Konfiguration', () => {
         expect(chargeMock).toHaveBeenCalledWith('ean-checked', { count: 1, priceUsd: 0.005 });
 
         chargedEmitter.emitAlertReturned({ alertNumber: 'A12/00001/26' });
-        expect(chargeMock).toHaveBeenCalledWith('alert-returned', { count: 1, priceUsd: 0.010 });
+        expect(chargeMock).toHaveBeenCalledWith('alert-returned', { count: 1, priceUsd: 0.0019 });
       });
 
       it('zeichnet die Event-Historie auf und unterstuetzt reset()', () => {
@@ -299,6 +301,14 @@ describe('F07: Apify Actor Struktur & Konfiguration', () => {
       expect(emitter.getEventCount(PPE_EVENTS.EAN_CHECKED)).toBe(1);
       expect(emitter.getEventCount(PPE_EVENTS.ALERT_RETURNED)).toBe(result.items.length);
       expect(result.totalCostUsd).toBeGreaterThan(0);
+    });
+
+    it('wirft EmptyDatabaseError, wenn der Storage vollstaendig leer ist', async () => {
+      const emptyStorage = new SqliteAlertStorage(':memory:', { autoSeed: false });
+      await expect(runActor({ ean: '5054298241091' }, { storage: emptyStorage })).rejects.toThrow(
+        EmptyDatabaseError
+      );
+      emptyStorage.close();
     });
 
     it('loest ean-checked auch bei unbekannter EAN mit 0 Treffern aus', async () => {

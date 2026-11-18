@@ -33,7 +33,7 @@ export const ALL_PPE_EVENTS: readonly PPEEventType[] = Object.values(PPE_EVENTS)
  */
 export const PPE_EVENT_PRICES: Record<PPEEventType, number> = {
   [PPE_EVENTS.EAN_CHECKED]: 0.005,       // $0.005 pro gepruefter EAN/GTIN
-  [PPE_EVENTS.ALERT_RETURNED]: 0.010,    // $0.010 pro zurueckgegebenem Alert-Datensatz
+  [PPE_EVENTS.ALERT_RETURNED]: 0.0019,   // $0.0019 pro zurueckgegebenem Alert-Datensatz ($1.90 / 1.000 Results)
   [PPE_EVENTS.QUERY_EXECUTED]: 0.002,    // $0.002 pro Freitext-Suchabfrage
   [PPE_EVENTS.WEEKLY_MONITORED]: 0.020,  // $0.020 pro Wochenuebersichts-Abruf
 } as const;

@@ -15,5 +15,8 @@
     "build": "tsc",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@productsafetyengine/core": "*"
   }
 }

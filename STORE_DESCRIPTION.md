@@ -94,11 +94,11 @@ ProductSafetyEngine features a competitive marketplace entry model at **$1.90 / 
 
 - **Marketplace Entry Model:** **$1.90 / 1.000 Results** ($0.0019 per result)
 - **EAN Check:** **$0.005** per barcode verified
-- **Alert Matched:** **$0.010** per recall record returned (scaling down with volume)
+- **Alert Matched:** **$0.0019** per recall record returned ($1.90 / 1.000 Results)
 - **Query Executed:** **$0.002** per keyword search
 - **Weekly Monitor:** **$0.020** per weekly digest batch
 
-> Compare this to traditional enterprise compliance suites costing upwards of **$15,000/year** — ProductSafetyEngine gives you the exact same official data for a fraction of the cost (**$1.90 / 1.000 Results**).
+> Compare this to traditional enterprise compliance suites with high fixed annual commitments — ProductSafetyEngine gives you official European Commission data on a flexible Pay-Per-Event basis (**$1.90 / 1.000 Results**).
 
 *See [PRICING.md](PRICING.md) for detailed pricing examples, entry model specs, and volume tier calculations.*
 

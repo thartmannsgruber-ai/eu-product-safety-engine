@@ -136,7 +136,7 @@ Das Projekt ist als **npm Workspace-Monorepo** organisiert:
 ### Installation
 ```bash
 # Repository klonen
-git clone https://github.com/your-org/ProductSafetyEngine.git
+git clone https://github.com/thartmannsgruber-ai/ProductSafetyEngine.git
 cd ProductSafetyEngine
 
 # Abhängigkeiten im Monorepo installieren

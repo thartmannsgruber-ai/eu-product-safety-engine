@@ -6,6 +6,17 @@ import { cleanBarcode, normalizeToGtin14 } from './gtin.js';
 import { parseSafetyGateFileSync } from './parser.js';
 
 /**
+ * Error raised when an alert query is attempted against an uninitialized or empty database.
+ * Protects against false-negative "0 results" outputs due to missing fixtures or failed cold-start.
+ */
+export class EmptyDatabaseError extends Error {
+  constructor(message = 'Safety Gate database is empty (0 records). Ensure autoSeed is enabled or run syncSafetyGate().') {
+    super(message);
+    this.name = 'EmptyDatabaseError';
+  }
+}
+
+/**
  * Filter and search criteria for alert queries.
  */
 export interface AlertSearchQuery {

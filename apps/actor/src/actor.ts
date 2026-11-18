@@ -13,6 +13,7 @@ import {
   type AlertRecord,
   isValidEan,
   SqliteAlertStorage,
+  EmptyDatabaseError,
 } from '@productsafetyengine/core';
 import {
   PpeEventEmitter,
@@ -172,6 +173,13 @@ export async function runActor(
   const storage =
     options.storage ??
     new SqliteAlertStorage(process.env.SQLITE_DB_PATH || ':memory:', { autoSeed: true });
+
+  const totalInDb = await storage.count();
+  if (totalInDb === 0) {
+    throw new EmptyDatabaseError(
+      'Safety Gate database is uninitialized (0 records). Ensure autoSeed is active or data is populated.'
+    );
+  }
 
   const matchedAlerts: AlertRecord[] = [];
   const seenAlertNumbers = new Set<string>();
