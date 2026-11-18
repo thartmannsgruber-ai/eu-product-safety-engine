@@ -15,6 +15,7 @@ import {
   SqliteAlertStorage,
   EmptyDatabaseError,
 } from '@productsafetyengine/core';
+import { syncSafetyGate } from '@productsafetyengine/fetcher';
 import {
   PpeEventEmitter,
   PPE_EVENTS,
@@ -109,6 +110,7 @@ export const ActorInputSchema = z
       .optional()
       .transform((val) => (val && val.length > 0 ? val : undefined)),
     woche: z.string().trim().optional(),
+    refreshData: z.coerce.boolean().optional(),
     maxItems: z.coerce.number().int().positive().default(100),
   }))
   .transform((data) => {
@@ -121,6 +123,7 @@ export const ActorInputSchema = z
       category: data.category,
       query,
       week,
+      refreshData: data.refreshData,
       maxItems: data.maxItems,
     };
   });
@@ -173,6 +176,16 @@ export async function runActor(
   const storage =
     options.storage ??
     new SqliteAlertStorage(process.env.SQLITE_DB_PATH || ':memory:', { autoSeed: true });
+
+  if (input.refreshData) {
+    try {
+      await syncSafetyGate(storage);
+    } catch (err) {
+      if (process.env.NODE_ENV !== 'test') {
+        console.warn('[Actor] Live data refresh failed, proceeding with local database:', err);
+      }
+    }
+  }
 
   const totalInDb = await storage.count();
   if (totalInDb === 0) {

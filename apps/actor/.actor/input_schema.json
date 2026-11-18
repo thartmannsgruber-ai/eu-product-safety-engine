@@ -36,6 +36,13 @@
       "description": "Publication week filter (e.g. '2026-W45', '2026-45' or '45').",
       "editor": "textfield"
     },
+    "refreshData": {
+      "title": "Live Data Refresh",
+      "type": "boolean",
+      "description": "If true, fetches the latest official Safety Gate XML alerts from the European Commission before querying.",
+      "default": false,
+      "editor": "checkbox"
+    },
     "maxItems": {
       "title": "Maximum Items",
       "type": "integer",

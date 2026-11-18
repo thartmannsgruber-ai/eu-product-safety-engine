@@ -34,6 +34,22 @@ export interface SyncResult {
 }
 
 /**
+ * Berechnet das ISO-Kalenderjahr und die ISO-Kalenderwoche (1-53) nach ISO 8601.
+ */
+export function getCurrentIsoWeek(d: Date = new Date()): { year: number; week: number } {
+  const target = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dayNr = (target.getUTCDay() + 6) % 7;
+  target.setUTCDate(target.getUTCDate() - dayNr + 3);
+  const firstThursday = target.getTime();
+  target.setUTCMonth(0, 1);
+  if (target.getUTCDay() !== 4) {
+    target.setUTCMonth(0, 1 + ((4 - target.getUTCDay() + 7) % 7));
+  }
+  const weekNumber = 1 + Math.ceil((firstThursday - target.getTime()) / 604800000);
+  return { year: new Date(firstThursday).getUTCFullYear(), week: weekNumber };
+}
+
+/**
  * Erzeugt die offizielle Safety Gate XML-Download-URL fuer ein bestimmtes Jahr und eine Woche.
  */
 export function buildSafetyGateWeeklyUrl(year: string | number, week: string | number): string {
@@ -56,8 +72,9 @@ export async function syncSafetyGate(
   let sourceUrl = options.url;
   let fromCache = false;
 
-  const currentYear = options.year ? String(options.year) : String(new Date().getFullYear());
-  const currentWeek = options.week ? String(options.week).replace(/^W/i, '') : '45';
+  const iso = getCurrentIsoWeek();
+  const currentYear = options.year ? String(options.year) : String(iso.year);
+  const currentWeek = options.week ? String(options.week).replace(/^W/i, '') : String(iso.week);
 
   if (!xml) {
     if (!sourceUrl) {

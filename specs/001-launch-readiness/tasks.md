@@ -7,4 +7,4 @@
 - [x] T4: P3 Store listing & README cleanup (English, no placeholders)
 - [x] T5: P4 Standalone MCP packaging & smithery.yaml verification
 - [x] T6: Re-run full test suite (203/203 green) & launchpad gates (6/6 green)
-- [ ] T7: Herznieren 360-review (.audit/herznieren-2026-11-18.md)
+- [x] T7: Herznieren 360-review (.audit/herznieren-2026-11-18.md)
