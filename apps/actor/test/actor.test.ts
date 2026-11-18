@@ -61,6 +61,12 @@ describe('F07: Apify Actor Struktur & Konfiguration', () => {
       expect(envNodeVersion === '22' || directNodeVersion === '22').toBe(true);
     });
 
+    it('fuehrt npm run build im Dockerfile aus (F01_BUILD_ENTRYPOINTS)', () => {
+      const dockerfilePath = path.join(ACTOR_DIR, '.actor/Dockerfile');
+      const dockerfileContent = fs.readFileSync(dockerfilePath, 'utf-8');
+      expect(dockerfileContent).toMatch(/npm run build/);
+    });
+
     it('referenziert existierende Input- und Dataset-Schemas', () => {
       const content = fs.readFileSync(actorJsonPath, 'utf-8');
       const data = JSON.parse(content);

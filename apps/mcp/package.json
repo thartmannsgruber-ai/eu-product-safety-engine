@@ -2,9 +2,13 @@
   "name": "@productsafetyengine/mcp",
   "version": "1.0.0",
   "type": "module",
+  "bin": {
+    "eu-product-safety-mcp": "./dist/index.js"
+  },
   "main": "./src/server.ts",
   "types": "./src/server.ts",
   "scripts": {
+    "build": "tsc && chmod +x dist/index.js",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },

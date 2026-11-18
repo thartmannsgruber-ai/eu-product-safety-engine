@@ -11,6 +11,7 @@ import {
   type IAlertStorage,
   type AlertRecord,
   isValidEan,
+  SqliteAlertStorage,
 } from '@productsafetyengine/core';
 import {
   PpeEventEmitter,
@@ -67,7 +68,7 @@ export const ActorInputSchema = z.object({
 export type ActorInput = z.infer<typeof ActorInputSchema>;
 
 export interface ActorRunOptions {
-  storage: IAlertStorage;
+  storage?: IAlertStorage;
   emitter?: PpeEventEmitter;
 }
 
@@ -85,11 +86,13 @@ export interface ActorRunResult {
  */
 export async function runActor(
   rawInput: unknown,
-  options: ActorRunOptions
+  options: ActorRunOptions = {}
 ): Promise<ActorRunResult> {
   const input = ActorInputSchema.parse(rawInput ?? {});
   const emitter = options.emitter ?? new PpeEventEmitter();
-  const storage = options.storage;
+  const storage =
+    options.storage ??
+    new SqliteAlertStorage(process.env.SQLITE_DB_PATH || ':memory:', { autoSeed: true });
 
   const matchedAlerts: AlertRecord[] = [];
   const seenAlertNumbers = new Set<string>();

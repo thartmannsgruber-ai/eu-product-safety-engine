@@ -15,6 +15,7 @@ import {
   type AlertRecord,
   isValidEan,
   MemoryAlertStorage,
+  SqliteAlertStorage,
   parseYearWeekFromAlert,
 } from '@productsafetyengine/core';
 import { sanitizeInput } from './sanitizer.js';
@@ -32,7 +33,9 @@ export class ServerStorageHolder {
   private currentStorage: IAlertStorage;
 
   constructor(initialStorage?: IAlertStorage) {
-    this.currentStorage = initialStorage ?? new MemoryAlertStorage();
+    this.currentStorage =
+      initialStorage ??
+      new SqliteAlertStorage(process.env.SQLITE_DB_PATH || ':memory:', { autoSeed: true });
   }
 
   get storage(): IAlertStorage {

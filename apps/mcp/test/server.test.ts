@@ -6,6 +6,8 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import fs from 'node:fs';
+import path from 'node:path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
@@ -17,6 +19,7 @@ import {
   SERVER_VERSION,
   DEFAULT_SERVER_CAPABILITIES,
 } from '../src/server.js';
+import { getOrCreateStorageHolder } from '../src/tools.js';
 import {
   sanitizeInput,
   detectPromptInjection,
@@ -70,6 +73,26 @@ describe('apps/mcp - server: Setup, Injection Guard & Zod Validation', () => {
 
     // connectStdioTransport akzeptiert Server und Transport
     expect(typeof connectStdioTransport).toBe('function');
+  });
+
+  it('besitzt ausfuehrbaren Binary-Entrypoint mit Shebang und bin-Feld (F01)', () => {
+    const pkgPath = path.resolve(__dirname, '../package.json');
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+    expect(pkg.bin).toBeDefined();
+    expect(pkg.bin['eu-product-safety-mcp']).toBe('./dist/index.js');
+
+    const srcIndexPath = path.resolve(__dirname, '../src/index.ts');
+    const srcIndexContent = fs.readFileSync(srcIndexPath, 'utf-8');
+    expect(srcIndexContent.startsWith('#!/usr/bin/env node')).toBe(true);
+  });
+
+  it('initialisiert SQLite-Storage beim Kaltstart automatisch mit den Fixture-Alerts', async () => {
+    const server = createMcpServer();
+    const holder = getOrCreateStorageHolder(server);
+    expect(await holder.storage.count()).toBe(75);
+    const results = await holder.storage.getByEan('5054298241091');
+    expect(results).toHaveLength(1);
+    expect(results[0].brand).toBe('Jojo Maman Bébé');
   });
 });
 

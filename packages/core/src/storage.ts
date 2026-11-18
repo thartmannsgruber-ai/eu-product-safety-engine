@@ -1,8 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
-import { type AlertRecord } from './schema.js';
+import { type AlertRecord, normalizeAlerts } from './schema.js';
 import { cleanBarcode, normalizeToGtin14 } from './gtin.js';
+import { parseSafetyGateFileSync } from './parser.js';
 
 /**
  * Filter and search criteria for alert queries.
@@ -423,12 +424,65 @@ export class MemoryAlertStorage implements IAlertStorage {
 }
 
 /**
+ * Configuration options for SqliteAlertStorage, including coldstart auto-seeding.
+ */
+export interface SqliteAlertStorageOptions {
+  autoSeed?: boolean;
+  fixturePath?: string;
+}
+
+/**
+ * Resolves the location of fixtures/safety_gate_2026_45.xml in any workspace or runtime context.
+ */
+export function resolveFixturePath(customPath?: string): string | null {
+  if (customPath && fs.existsSync(customPath)) {
+    return path.resolve(customPath);
+  }
+  if (process.env.SAFETY_GATE_FIXTURE_PATH && fs.existsSync(process.env.SAFETY_GATE_FIXTURE_PATH)) {
+    return path.resolve(process.env.SAFETY_GATE_FIXTURE_PATH);
+  }
+
+  // Check process.cwd()
+  const cwdCandidate = path.resolve(process.cwd(), 'fixtures/safety_gate_2026_45.xml');
+  if (fs.existsSync(cwdCandidate)) return cwdCandidate;
+
+  // Search upwards from __dirname
+  try {
+    let currDir = typeof __dirname !== 'undefined' ? __dirname : process.cwd();
+    for (let i = 0; i < 6; i++) {
+      const candidate = path.resolve(currDir, 'fixtures/safety_gate_2026_45.xml');
+      if (fs.existsSync(candidate)) return candidate;
+      const parent = path.dirname(currDir);
+      if (parent === currDir) break;
+      currDir = parent;
+    }
+  } catch {
+    // Ignore and proceed
+  }
+
+  // Search upwards from process.cwd()
+  let currDir = process.cwd();
+  for (let i = 0; i < 6; i++) {
+    const candidate = path.resolve(currDir, 'fixtures/safety_gate_2026_45.xml');
+    if (fs.existsSync(candidate)) return candidate;
+    const parent = path.dirname(currDir);
+    if (parent === currDir) break;
+    currDir = parent;
+  }
+
+  return null;
+}
+
+/**
  * Persistent or in-memory SQLite implementation of IAlertStorage using Node 22 native node:sqlite.
  */
 export class SqliteAlertStorage implements IAlertStorage {
   private db: DatabaseSync;
 
-  constructor(locationOrDb: string | DatabaseSync = ':memory:') {
+  constructor(
+    locationOrDb: string | DatabaseSync = ':memory:',
+    options?: SqliteAlertStorageOptions,
+  ) {
     if (typeof locationOrDb === 'string') {
       if (locationOrDb !== ':memory:' && !locationOrDb.startsWith('file:')) {
         const dir = path.dirname(locationOrDb);
@@ -442,6 +496,10 @@ export class SqliteAlertStorage implements IAlertStorage {
     }
 
     this.initTables();
+
+    if (options?.autoSeed) {
+      this.seedFromFixtureIfEmpty(options.fixturePath);
+    }
   }
 
   public getRawDatabase(): DatabaseSync {
@@ -515,7 +573,7 @@ export class SqliteAlertStorage implements IAlertStorage {
     };
   }
 
-  async insertAlerts(alerts: AlertRecord[]): Promise<number> {
+  insertAlertsSync(alerts: AlertRecord[]): number {
     if (!alerts || alerts.length === 0) return 0;
 
     const insertAlertStmt = this.db.prepare(`
@@ -614,6 +672,10 @@ export class SqliteAlertStorage implements IAlertStorage {
     }
 
     return count;
+  }
+
+  async insertAlerts(alerts: AlertRecord[]): Promise<number> {
+    return this.insertAlertsSync(alerts);
   }
 
   async getByEan(ean: string | string[]): Promise<AlertRecord[]> {
@@ -794,9 +856,41 @@ export class SqliteAlertStorage implements IAlertStorage {
     return row ? this.mapRowToAlertRecord(row) : null;
   }
 
-  async count(): Promise<number> {
+  countSync(): number {
     const row = this.db.prepare('SELECT COUNT(*) as cnt FROM alerts').get() as { cnt: number } | undefined;
     return row ? Number(row.cnt) : 0;
+  }
+
+  async count(): Promise<number> {
+    return this.countSync();
+  }
+
+  /**
+   * Seeds the database from fixtures/safety_gate_2026_45.xml if storage is currently empty.
+   * Returns the number of seeded alerts (0 if already populated or fixture not found).
+   */
+  seedFromFixtureIfEmpty(fixturePath?: string): number {
+    const currentCount = this.countSync();
+    if (currentCount > 0) {
+      return 0;
+    }
+
+    const resolved = resolveFixturePath(fixturePath);
+    if (!resolved || !fs.existsSync(resolved)) {
+      return 0;
+    }
+
+    const report = parseSafetyGateFileSync(resolved);
+    const normalized = normalizeAlerts(report.notifications).map((alert) => {
+      const rec = alert as Record<string, unknown>;
+      return {
+        ...alert,
+        year: rec.year ? String(rec.year) : (report.reportYear || ''),
+        week: rec.week ? String(rec.week) : (report.reportWeek || ''),
+      } as AlertRecord;
+    });
+
+    return this.insertAlertsSync(normalized);
   }
 
   async clear(): Promise<void> {
@@ -806,4 +900,17 @@ export class SqliteAlertStorage implements IAlertStorage {
   close(): void {
     this.db.close();
   }
+}
+
+/**
+ * Factory helper for coldstart SQLite storage with automatic seeding if empty.
+ */
+export function initColdstartStorage(
+  locationOrDb: string | DatabaseSync = process.env.SQLITE_DB_PATH || ':memory:',
+  options: SqliteAlertStorageOptions = { autoSeed: true },
+): SqliteAlertStorage {
+  return new SqliteAlertStorage(locationOrDb, {
+    autoSeed: options.autoSeed !== false,
+    fixturePath: options.fixturePath,
+  });
 }

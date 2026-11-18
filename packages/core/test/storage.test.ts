@@ -7,6 +7,7 @@ import {
   type AlertSearchQuery,
   MemoryAlertStorage,
   SqliteAlertStorage,
+  initColdstartStorage,
 } from '../src/storage.js';
 import { type AlertRecord, normalizeAlerts } from '../src/schema.js';
 import { parseSafetyGateFileSync } from '../src/parser.js';
@@ -423,6 +424,58 @@ describe('storage - IAlertStorage, MemoryAlertStorage & SqliteAlertStorage', () 
         db2.close();
       } finally {
         fs.rmSync(tempDir, { recursive: true, force: true });
+      }
+    });
+  });
+
+  describe('Coldstart Auto-Seeding (F01_BUILD_ENTRYPOINTS)', () => {
+    it('initialisiert SQLite-Storage beim Kaltstart automatisch mit den Fixture-Alerts', async () => {
+      const coldStorage = new SqliteAlertStorage(':memory:', { autoSeed: true });
+      try {
+        const total = await coldStorage.count();
+        expect(total).toBe(75);
+
+        // Barcode check against fixture alert (Jojo Maman Bébé)
+        const found = await coldStorage.getByEan('5054298241091');
+        expect(found).toHaveLength(1);
+        expect(found[0].brand).toBe('Jojo Maman Bébé');
+        expect(found[0].product).toBe("Children's jacket");
+      } finally {
+        coldStorage.close();
+      }
+    });
+
+    it('initialisiert SQLite-Storage ueber initColdstartStorage Helper', async () => {
+      const coldStorage = initColdstartStorage(':memory:');
+      try {
+        expect(await coldStorage.count()).toBe(75);
+      } finally {
+        coldStorage.close();
+      }
+    });
+
+    it('fuehrt kein doppeltes Seeding aus wenn Storage bereits Alerts enthaelt (Idempotenz)', async () => {
+      const storage = new SqliteAlertStorage(':memory:', { autoSeed: true });
+      try {
+        expect(await storage.count()).toBe(75);
+        // Explicit second seed invocation must be a no-op
+        const secondSeedCount = storage.seedFromFixtureIfEmpty(fixturePath);
+        expect(secondSeedCount).toBe(0);
+        expect(await storage.count()).toBe(75);
+      } finally {
+        storage.close();
+      }
+    });
+
+    it('akzeptiert einen expliziten fixturePath beim Auto-Seeding', async () => {
+      const storage = new SqliteAlertStorage(':memory:', {
+        autoSeed: true,
+        fixturePath,
+      });
+      try {
+        expect(await storage.count()).toBe(75);
+      } finally {
+        storage.close();
       }
     });
   });
