@@ -40,10 +40,7 @@
         "description": "List of associated EAN/GTIN barcodes."
       },
       "risk_type": {
-        "type": "array",
-        "items": {
-          "type": "string"
-        },
+        "type": "string",
         "description": "Types of risk (e.g., Chemical, Choking, Fire)."
       },
       "danger_description": {
