@@ -7,6 +7,7 @@
  */
 
 import { z } from 'zod';
+import { Actor } from 'apify';
 import {
   type IAlertStorage,
   type AlertRecord,
@@ -17,6 +18,7 @@ import {
   PpeEventEmitter,
   PPE_EVENTS,
   type PPEEventType,
+  isApifyEnvironment,
 } from './ppe.js';
 
 /**
@@ -127,6 +129,7 @@ export type ActorInput = z.infer<typeof ActorInputSchema>;
 export interface ActorRunOptions {
   storage?: IAlertStorage;
   emitter?: PpeEventEmitter;
+  pushData?: boolean;
 }
 
 export interface ActorRunResult {
@@ -136,6 +139,24 @@ export interface ActorRunResult {
   eventSummary: Record<PPEEventType, number>;
   totalCostUsd: number;
   ppeEventsTriggered: number;
+}
+
+/**
+ * Exportiert Daten in das Standard-Dataset von Apify via Actor.pushData().
+ * Falls nicht in der Apify-Cloud ausgefuehrt (z.B. Offline-Tests), erfolgt ein sicherer No-op Fallback.
+ */
+export async function pushApifyData(
+  data: Record<string, unknown> | Record<string, unknown>[]
+): Promise<void> {
+  if (isApifyEnvironment()) {
+    try {
+      await Actor.pushData(data);
+    } catch (err) {
+      if (process.env.NODE_ENV !== 'test') {
+        console.warn('[Actor] Failed to pushData to Apify dataset:', err);
+      }
+    }
+  }
 }
 
 /**
@@ -273,6 +294,16 @@ export async function runActor(
     });
 
     addUniqueAlerts(defaultMatches);
+  }
+
+  // 5. Asynchrone PPE-Charge-Operationen abwarten
+  if (typeof (emitter as any).waitForPendingCharges === 'function') {
+    await (emitter as any).waitForPendingCharges();
+  }
+
+  // 6. Apify Dataset Integration: Gefundene Alert-Datensaetze via Actor.pushData() exportieren
+  if (options.pushData !== false) {
+    await pushApifyData(matchedAlerts);
   }
 
   return {

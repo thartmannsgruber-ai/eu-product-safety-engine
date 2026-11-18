@@ -1,0 +1,9 @@
+# Smithery.ai MCP Server Configuration
+# Start command: npx eu-product-safety-mcp
+startCommand:
+  type: stdio
+  config: {}
+  command: npx
+  args:
+    - -y
+    - eu-product-safety-mcp

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { Actor } from 'apify';
 import {
   PPE_EVENTS,
   PPE_EVENT_PRICES,
@@ -9,6 +10,11 @@ import {
   type PPEEventType,
   ActorInputSchema,
   runActor,
+  isApifyEnvironment,
+  chargeApify,
+  pushApifyData,
+  main,
+  isDirectExecution,
 } from '../src/index.js';
 import {
   MemoryAlertStorage,
@@ -460,6 +466,117 @@ describe('F07: Apify Actor Struktur & Konfiguration', () => {
       // Pay-Per-Event Kosten fuer 4 x ean-checked: 4 * 0.005 USD = 0.020 USD
       const eanCheckedCost = 4 * PPE_EVENT_PRICES[PPE_EVENTS.EAN_CHECKED];
       expect(result.totalCostUsd).toBeGreaterThanOrEqual(eanCheckedCost);
+    });
+  });
+
+  describe('F03_APIFY_SDK_SMITHERY: Apify SDK Runtime-Wiring & smithery.yaml', () => {
+    let storage: MemoryAlertStorage;
+
+    beforeEach(() => {
+      vi.restoreAllMocks();
+      storage = new MemoryAlertStorage();
+      const parsed = parseSafetyGateFileSync(FIXTURE_PATH);
+      const normalized = normalizeAlerts(parsed.notifications);
+      storage.insertAlerts(normalized);
+    });
+
+    describe('Akzeptanzkriterium 1: smithery.yaml im Root mit korrekter Startkonfiguration (npx eu-product-safety-mcp)', () => {
+      const smitheryYamlPath = path.resolve(REPO_ROOT, 'smithery.yaml');
+
+      it('smithery.yaml existiert im Root-Verzeichnis', () => {
+        expect(fs.existsSync(smitheryYamlPath)).toBe(true);
+      });
+
+      it('enthält valide Startkonfiguration mit startCommand, type: stdio und npx eu-product-safety-mcp', () => {
+        const content = fs.readFileSync(smitheryYamlPath, 'utf-8');
+        expect(content).toContain('startCommand');
+        expect(content).toMatch(/type:\s*['"]?stdio['"]?/);
+        expect(content).toMatch(/command:\s*['"]?npx['"]?/);
+        expect(content).toContain('eu-product-safety-mcp');
+      });
+    });
+
+    describe('Akzeptanzkriterium 2: Actor.charge() wird in Apify-Umgebung aufgerufen (abgesichert für Offline-Tests)', () => {
+      it('außerhalb der Apify-Umgebung (Offline-Modus): Actor.charge() wird nicht aufgerufen (Mock/Noop-Fallback)', async () => {
+        const origAtHome = process.env.APIFY_IS_AT_HOME;
+        delete process.env.APIFY_IS_AT_HOME;
+        vi.spyOn(Actor, 'isAtHome').mockReturnValue(false);
+        const chargeSpy = vi.spyOn(Actor, 'charge');
+
+        const emitter = new PpeEventEmitter();
+        emitter.emitEanChecked({ ean: '5054298241091', validGtin: true, matchCount: 1 });
+        await emitter.waitForPendingCharges();
+
+        expect(isApifyEnvironment()).toBe(false);
+        expect(chargeSpy).not.toHaveBeenCalled();
+
+        if (origAtHome !== undefined) process.env.APIFY_IS_AT_HOME = origAtHome;
+      });
+
+      it('in Apify-Umgebung: Actor.charge() wird mit { eventName, count } aufgerufen', async () => {
+        vi.spyOn(Actor, 'isAtHome').mockReturnValue(true);
+        const chargeSpy = vi.spyOn(Actor, 'charge').mockResolvedValue({
+          eventChargeLimitReached: false,
+          chargedCount: 1,
+          chargeableWithinLimit: {},
+        } as any);
+
+        const emitter = new PpeEventEmitter();
+        emitter.emitEanChecked({ ean: '5054298241091', validGtin: true, matchCount: 1 });
+        await emitter.waitForPendingCharges();
+
+        expect(chargeSpy).toHaveBeenCalledWith({
+          eventName: PPE_EVENTS.EAN_CHECKED,
+          count: 1,
+        });
+      });
+
+      it('runActor() in Apify-Umgebung ruft Actor.charge() für Events und Actor.pushData() für Datensätze auf', async () => {
+        vi.spyOn(Actor, 'isAtHome').mockReturnValue(true);
+        const chargeSpy = vi.spyOn(Actor, 'charge').mockResolvedValue({} as any);
+        const pushSpy = vi.spyOn(Actor, 'pushData').mockResolvedValue({} as any);
+
+        const emitter = new PpeEventEmitter();
+        const result = await runActor(
+          { ean: '5054298241091' },
+          { storage, emitter }
+        );
+
+        // ean-checked und alert-returned wurden über Actor.charge() abgerechnet
+        expect(chargeSpy).toHaveBeenCalledWith(
+          expect.objectContaining({ eventName: PPE_EVENTS.EAN_CHECKED })
+        );
+        expect(chargeSpy).toHaveBeenCalledWith(
+          expect.objectContaining({ eventName: PPE_EVENTS.ALERT_RETURNED })
+        );
+
+        // Gefundene Alerts wurden an Actor.pushData() übergeben
+        expect(pushSpy).toHaveBeenCalled();
+        expect(result.items.length).toBeGreaterThanOrEqual(1);
+      });
+    });
+
+    describe('Akzeptanzkriterium 3: apps/actor/src/index.ts führt Actor.main() beim direkten Container-Start aus', () => {
+      it('main() ruft Actor.main(), Actor.getInput() und runActor() auf', async () => {
+        let callbackExecuted = false;
+        const mainSpy = vi.spyOn(Actor, 'main').mockImplementation(async (fn: any) => {
+          callbackExecuted = true;
+          await fn();
+        });
+        const getInputSpy = vi.spyOn(Actor, 'getInput').mockResolvedValue({ query: 'test' });
+
+        await main();
+
+        expect(mainSpy).toHaveBeenCalledTimes(1);
+        expect(getInputSpy).toHaveBeenCalled();
+        expect(callbackExecuted).toBe(true);
+      });
+
+      it('isDirectExecution() erkennt den direkten Container-Start korrekt', () => {
+        expect(isDirectExecution('/app/apps/actor/dist/index.js')).toBe(true);
+        expect(isDirectExecution('apps/actor/dist/index.js')).toBe(true);
+        expect(isDirectExecution(undefined)).toBe(false);
+      });
     });
   });
 });

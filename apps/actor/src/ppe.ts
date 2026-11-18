@@ -7,6 +7,7 @@
  */
 
 import { EventEmitter } from 'node:events';
+import { Actor } from 'apify';
 
 /**
  * Offizielle Pay-Per-Event (PPE) Ereignisnamen.
@@ -102,6 +103,52 @@ export interface RecordedPPEEvent<T extends PPEEventType = PPEEventType> {
 }
 
 /**
+ * Prueft, ob der Code innerhalb einer Apify-Cloud-Laufzeitumgebung ausgefuehrt wird.
+ * Verhindert unnoetige oder fehlerhafte SDK-Aufrufe bei lokalen Offline-Tests.
+ */
+export function isApifyEnvironment(): boolean {
+  try {
+    if (typeof Actor !== 'undefined' && typeof Actor.isAtHome === 'function' && Actor.isAtHome()) {
+      return true;
+    }
+  } catch {
+    // ignore
+  }
+  if (process.env.APIFY_IS_AT_HOME === '1' || process.env.APIFY_TOKEN || process.env.APIFY_ACTOR_ID) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Fuehrt einen sicheren Aufruf an Apify Actor.charge() durch,
+ * sofern wir uns in einer Apify-Cloud-Umgebung befinden.
+ * Ausserhalb (z.B. Offline-Tests) erfolgt ein sicherer No-op / Mock-Fallback.
+ */
+export async function chargeApify(
+  eventName: PPEEventType,
+  options?: { count?: number; priceUsd?: number }
+): Promise<void> {
+  const count = options?.count ?? 1;
+  if (isApifyEnvironment()) {
+    try {
+      await Actor.charge({ eventName, count });
+    } catch (err) {
+      if (process.env.NODE_ENV !== 'test') {
+        console.warn(`[PPE] Failed to charge event "${eventName}":`, err);
+      }
+    }
+  }
+}
+
+/**
+ * Standard-Charge-Handler fuer Apify Actor.charge()
+ */
+export const defaultApifyChargeHandler: ChargeHandler = async (eventName, options) => {
+  await chargeApify(eventName, options);
+};
+
+/**
  * Callback fuer Apify Actor.charge() Integration.
  */
 export type ChargeHandler = (
@@ -123,10 +170,11 @@ export class PpeEventEmitter extends EventEmitter {
   private history: RecordedPPEEvent[] = [];
   private prices: Record<PPEEventType, number>;
   private chargeHandler?: ChargeHandler;
+  private pendingCharges: Promise<unknown>[] = [];
 
   constructor(options?: PpeEventEmitterOptions) {
     super();
-    this.chargeHandler = options?.chargeHandler;
+    this.chargeHandler = options?.chargeHandler ?? defaultApifyChargeHandler;
     this.prices = { ...PPE_EVENT_PRICES, ...options?.customPrices };
     this.counts = {
       [PPE_EVENTS.EAN_CHECKED]: 0,
@@ -141,6 +189,16 @@ export class PpeEventEmitter extends EventEmitter {
    */
   setChargeHandler(handler: ChargeHandler | undefined): void {
     this.chargeHandler = handler;
+  }
+
+  /**
+   * Wartet auf alle offenen asynchronen Charge-Operationen.
+   */
+  async waitForPendingCharges(): Promise<void> {
+    if (this.pendingCharges.length > 0) {
+      await Promise.allSettled(this.pendingCharges);
+      this.pendingCharges = [];
+    }
   }
 
   /**
@@ -163,7 +221,10 @@ export class PpeEventEmitter extends EventEmitter {
     // Apify-Charge Callback synchron oder asynchron informieren
     if (this.chargeHandler) {
       try {
-        void this.chargeHandler(event, { count: 1, priceUsd });
+        const res = this.chargeHandler(event, { count: 1, priceUsd });
+        if (res && typeof (res as Promise<void>).then === 'function') {
+          this.pendingCharges.push(res);
+        }
       } catch (err) {
         this.emit('error', err);
       }
@@ -265,5 +326,6 @@ export class PpeEventEmitter extends EventEmitter {
       this.counts[event] = 0;
     }
     this.history = [];
+    this.pendingCharges = [];
   }
 }

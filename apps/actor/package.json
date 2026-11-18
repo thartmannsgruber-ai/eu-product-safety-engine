@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@productsafetyengine/core": "*",
+    "apify": "^3.7.2",
     "zod": "^4.6.7"
   }
 }
