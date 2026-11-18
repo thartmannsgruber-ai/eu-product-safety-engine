@@ -3,7 +3,8 @@
  *
  * Pay-Per-Event (PPE) Konstanten, Typen und Event-Emitter fuer den Apify Actor.
  * Ermoeglicht die praezise Abrechnung pro Ereignis (z.B. ean-checked, alert-returned)
- * gemaess Apify Store Monetization Richtlinien.
+ * gemaess Apify Store Monetization Richtlinien mit wettbewerbsfaehigem Einstiegspreismodell
+ * ($1.90 / 1.000 Results).
  */
 
 import { EventEmitter } from 'node:events';

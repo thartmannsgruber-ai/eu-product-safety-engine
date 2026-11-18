@@ -1,6 +1,15 @@
 # Pricing Model & Pay-Per-Event (PPE) Breakdown
 
-ProductSafetyEngine utilizes an event-driven, transparent **Pay-Per-Event (PPE)** pricing architecture. There are no opaque setup fees, no mandatory multi-thousand-dollar annual contracts, and no idle retainer charges: **you only pay for the exact verification events and data points your systems consume.**
+ProductSafetyEngine utilizes an event-driven, transparent **Pay-Per-Event (PPE)** pricing architecture with a competitive marketplace entry tier of **$1.90 / 1.000 Results** ($1.90 per 1,000 results / $0.0019 per record). There are no opaque setup fees, no mandatory multi-thousand-dollar annual contracts, and no idle retainer charges: **you only pay for the exact verification events and data points your systems consume.**
+
+---
+
+## 0. Competitive Marketplace Entry Pricing ($1.90 / 1.000 Results)
+
+For bulk e-commerce catalog screenings and dataset ingestion in the Apify Store, ProductSafetyEngine provides an industry-leading entry pricing model:
+- **Marketplace Entry Model:** **$1.90 / 1.000 Results** ($0.0019 per delivered result record).
+- **Predictable Cost Control:** Transparent billing with automated usage ceilings. Screen thousands of ASINs, SKUs, and EANs with zero financial friction.
+- **Pay-Per-Event Granularity:** Mix and match barcode checks, search queries, and weekly alert digests.
 
 ---
 
@@ -11,7 +20,7 @@ The official event definitions and standard unit prices (in USD) are strictly al
 | Event Identifier (`PPE_EVENTS`) | Description | Unit Price (USD) | Unit Price (EUR approx.) | Billable Unit |
 |:---|:---|:---|:---|:---|
 | **`ean-checked`** | Validation and database screening of a single GTIN / EAN barcode (including Modulo-10 checksum validation). | **$0.005** | ~€0.0046 | Per unique barcode processed |
-| **`alert-returned`** | Complete, normalized recall record delivered in the dataset (risk level, defects, legal measures, countries). | **$0.010** | ~€0.0092 | Per matching alert returned |
+| **`alert-returned`** | Complete, normalized recall record delivered in the dataset (risk level, defects, legal measures, countries). Aligned with the **$1.90 / 1.000 Results** entry tier for bulk volume. | **$0.010** | ~€0.0092 | Per matching alert returned |
 | **`query-executed`** | Full-text, category, or parameter-based search query across indexed RAPEX records. | **$0.002** | ~€0.0018 | Per executed search query |
 | **`weekly-monitored`** | Systematic batch retrieval of an entire calendar week's official EU Safety Gate publications. | **$0.020** | ~€0.0185 | Per weekly batch fetched |
 
@@ -50,7 +59,7 @@ To illustrate how the Pay-Per-Event model operates in real-world business enviro
 - **52 Weekly digests (`weekly-monitored`):** $52 \times \$0.020 = \$1.04$
 - **Total Monthly Cost:** **$515.04 / month** (~€475.00)
 
-> **Industry Comparison:** Legacy compliance suites and enterprise ESG/product safety databases typically charge between **€12,000 and €45,000 annually** for static seat licenses with severe query caps. ProductSafetyEngine provides greater agility, sub-second latency, and official EU source data at a 90%+ cost reduction.
+> **Industry Comparison:** Legacy compliance suites and enterprise ESG/product safety databases typically charge between **€12,000 and €45,000 annually** for static seat licenses with severe query caps. ProductSafetyEngine provides greater agility, sub-second latency, and official EU source data at a 90%+ cost reduction with entry pricing of **$1.90 / 1.000 Results**.
 
 ---
 
@@ -85,10 +94,11 @@ For local testing, staging, and agent evaluation, the engine ships with `NoopPay
 
 ---
 
-## 4. Volume Discounts & Custom Enterprise SLAs
+## 4. Volume Discounts & Marketplace Entry Model
 
 For platforms screening more than **500,000 barcodes per month** or requiring dedicated private SQLite instances with sub-5ms SLA guarantees, custom volume pricing tiers and on-premise licensing agreements are available:
 
+- **Marketplace Entry Model:** **$1.90 / 1.000 Results** ($0.0019 / record)
 - **Tier 1 (Up to 50k events/mo):** Standard PPE Tariff
 - **Tier 2 (50k - 500k events/mo):** 20% discount on `ean-checked` ($0.004 / unit)
 - **Tier 3 (500k+ events/mo):** 40% discount on `ean-checked` ($0.003 / unit) or flat-rate cluster licensing.

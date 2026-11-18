@@ -5,7 +5,7 @@
 [![Vitest](https://img.shields.io/badge/Tests-Vitest%20100%25%20Offline-brightgreen.svg)](https://vitest.dev/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-> **High-Performance B2B Data Engine & Model Context Protocol (MCP) Server für EU-Produktsicherheits- und Rückrufdaten (Safety Gate / RAPEX & ECHA SCIP).**
+> **High-Performance B2B Data Engine & Model Context Protocol (MCP) Server für EU-Produktsicherheits- und Rückrufdaten (Safety Gate / RAPEX & REACH Chemical Recall Screening).**
 
 ---
 
@@ -40,7 +40,7 @@ Mit Inkrafttreten der europäischen Verordnung über die allgemeine Produktsiche
 
 ```
                           ┌────────────────────────────────────────┐
-                          │   EU Safety Gate (RAPEX) / ECHA Data   │
+                          │  EU Safety Gate (RAPEX) / REACH Data   │
                           │        (Official XML / JSON)           │
                           └───────────────────┬────────────────────┘
                                               │
@@ -194,9 +194,10 @@ npx tsx apps/mcp/src/index.ts
 
 ## Apify Actor & Pay-Per-Event (PPE)
 
-Der Actor in `apps/actor` ist für den Apify Store optimiert. Er ermöglicht es Nutzern, eigene Produktlisten oder EAN-Kataloge im Batch-Verfahren gegen alle EU-Rückrufe zu prüfen.
+Der Actor in `apps/actor` ist für den Apify Store optimiert und bietet ein hochkompetitives Einstiegspreismodell von **$1.90 / 1.000 Results** ($0.0019 pro geliefertem Datensatz). Er ermöglicht es Nutzern, eigene Produktlisten oder EAN-Kataloge im Batch-Verfahren gegen alle EU-Rückrufe zu prüfen.
 
 Abrechnung erfolgt verbrauchsgenau pro Event:
+- **Einstiegspreismodell:** **$1.90 / 1.000 Results** ($0.0019 pro Resultat)
 - `ean-checked`: **$0.005** pro geprüfter EAN
 - `alert-returned`: **$0.010** pro zurückgegebenem Alert
 - `query-executed`: **$0.002** pro Suchanfrage

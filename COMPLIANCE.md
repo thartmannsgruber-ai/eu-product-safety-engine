@@ -32,8 +32,8 @@ All safety alerts, product recalls, and chemical hazard records ingested by Prod
    - *Official Portal:* [https://ec.europa.eu/safety-gate-alerts/](https://ec.europa.eu/safety-gate-alerts/)
    - *Content:* Weekly alert reports detailing product descriptions, photos, risk classifications, notifying member states, country of origin, and adopted corrective measures.
 
-2. **European Chemicals Agency (ECHA):**
-   - *System:* Information on substances of very high concern (SVHC) under the REACH Regulation (EC No 1907/2006) and the SCIP database (Substances of Concern In articles as such or in complex objects / Products) under the Waste Framework Directive (2008/98/EC).
+2. **European Chemicals Agency (ECHA) & REACH Chemical Recall Screening:**
+   - *System:* Information on substances of very high concern (SVHC) and chemical recall screening under the REACH Regulation (EC No 1907/2006) and the SCIP database (Substances of Concern In articles as such or in complex objects / Products) under the Waste Framework Directive (2008/98/EC).
    - *Official Portal:* [https://echa.europa.eu/](https://echa.europa.eu/)
 
 ---

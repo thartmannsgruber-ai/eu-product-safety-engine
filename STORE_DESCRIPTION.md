@@ -1,7 +1,7 @@
-# EU Product Safety & Recall Engine (RAPEX & ECHA)
+# EU Product Safety & Recall Engine (RAPEX & REACH Chemical Recall Screening)
 
 > **Automated EU Compliance & Recall Screening for E-Commerce Sellers, Importers, and AI Agents.**  
-> Screen supplier catalogs, GTIN/EAN barcodes, and weekly recalls against official EU Safety Gate & REACH datasets in real time.
+> Screen supplier catalogs, GTIN/EAN barcodes, and weekly recalls against official EU Safety Gate & REACH Chemical Recall Screening datasets in real time.
 
 [![Apify Actor](https://img.shields.io/badge/Apify-Pay--Per--Event-orange.svg)](https://apify.com)
 [![Model Context Protocol](https://img.shields.io/badge/MCP-Ready%20Tools-blue.svg)](https://modelcontextprotocol.io)
@@ -28,7 +28,7 @@ Under the **EU General Product Safety Regulation (GPSR - EU 2023/988)** and the 
 Whether you operate an automated Apify pipeline, an e-commerce catalog sync, or autonomous AI agents via the **Model Context Protocol (MCP)**, this engine enables you to:
 
 1. **Verify EAN/GTIN Barcodes Instantly:** Screen entire product inventories against official EU Safety Gate (RAPEX) recall alerts before listing or buying inventory.
-2. **Detect Chemical & REACH Restrictions:** Identify toxic substances, phthalates in toys, lead/cadmium in consumer items, and REACH Candidate List (SVHC) violations before goods leave the factory.
+2. **Detect Chemical & REACH Restrictions:** Conduct comprehensive REACH Chemical Recall Screening to identify toxic substances, phthalates in toys, lead/cadmium in consumer items, and REACH Candidate List (SVHC) violations before goods leave the factory.
 3. **Automate Weekly Vigilance:** Monitor all weekly EU notifications automatically and receive structured JSON alerts tailored to your product categories.
 4. **Arm Your AI Agents with MCP Tools:** Connect Claude, Cursor, ChatGPT, or custom LLM agents directly to EU compliance intelligence with 4 dedicated, prompt-injection-safe tools.
 
@@ -45,7 +45,7 @@ Whether you operate an automated Apify pipeline, an e-commerce catalog sync, or 
 - Semantic and keyword search across brands, models, product categories, and dangerous defect descriptions.
 - Search by country of origin (e.g. identify all toys originating from specific regions with electrical safety notices).
 
-### 3. Dedicated Chemical & REACH Guard
+### 3. REACH Chemical Recall Screening & Hazard Guard
 - Targeted filtering for hazardous chemical alerts under the REACH regulation (EC 1907/2006).
 - Instant detection of restricted substances: Lead, Cadmium, Nickel release, Phthalates (DEHP, DBP, BBP, DIBP), PFOS/PFAS, and SVHC candidates.
 
@@ -78,7 +78,7 @@ Whether you operate an automated Apify pipeline, an e-commerce catalog sync, or 
 │ Your Input         │     │ ProductSafetyEngine   │     │ Actionable Output     │
 │ • EAN List         │ ──> │ • Modulo-10 Check     │ ──> │ • Verified Safety     │
 │ • Brand / Keyword  │     │ • RAPEX Index Lookup  │     │ • Detailed Risk Report│
-│ • Weekly Category  │     │ • ECHA Chemical Match │     │ • Legal Measures Log  │
+│ • Weekly Category  │     │ • REACH Chemical Match│     │ • Legal Measures Log  │
 └────────────────────┘     └───────────────────────┘     └───────────────────────┘
 ```
 
@@ -90,16 +90,17 @@ Whether you operate an automated Apify pipeline, an e-commerce catalog sync, or 
 
 ## Transparent Pay-Per-Event (PPE) Pricing
 
-No massive multi-thousand-dollar enterprise commitments. Only pay for the events you actually trigger:
+ProductSafetyEngine features a competitive marketplace entry model at **$1.90 / 1.000 Results** ($1.90 per 1,000 results / $0.0019 per record). No massive multi-thousand-dollar enterprise commitments. Only pay for the events you actually trigger:
 
+- **Marketplace Entry Model:** **$1.90 / 1.000 Results** ($0.0019 per result)
 - **EAN Check:** **$0.005** per barcode verified
-- **Alert Matched:** **$0.010** per recall record returned
+- **Alert Matched:** **$0.010** per recall record returned (scaling down with volume)
 - **Query Executed:** **$0.002** per keyword search
 - **Weekly Monitor:** **$0.020** per weekly digest batch
 
-> Compare this to traditional enterprise compliance suites costing upwards of **$15,000/year** — ProductSafetyEngine gives you the exact same official data for a fraction of the cost.
+> Compare this to traditional enterprise compliance suites costing upwards of **$15,000/year** — ProductSafetyEngine gives you the exact same official data for a fraction of the cost (**$1.90 / 1.000 Results**).
 
-*See [PRICING.md](PRICING.md) for detailed pricing examples and volume tier calculations.*
+*See [PRICING.md](PRICING.md) for detailed pricing examples, entry model specs, and volume tier calculations.*
 
 ---
 

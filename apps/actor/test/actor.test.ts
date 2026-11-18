@@ -579,4 +579,65 @@ describe('F07: Apify Actor Struktur & Konfiguration', () => {
       });
     });
   });
+
+  describe('F04_STORE_METADATA_PRICING: Marktplatz-SEO, GPSR-Keywords & Pricing-Glättung', () => {
+    const actorJsonPath = path.join(ACTOR_DIR, '.actor/actor.json');
+    const pricingMdPath = path.resolve(REPO_ROOT, 'PRICING.md');
+    const storeDescPath = path.resolve(REPO_ROOT, 'STORE_DESCRIPTION.md');
+    const compliancePath = path.resolve(REPO_ROOT, 'COMPLIANCE.md');
+    const readmePath = path.resolve(REPO_ROOT, 'README.md');
+
+    it('Kriterium 1: actor.json enthält GPSR, EAN Check und korrekte Kategorien', () => {
+      expect(fs.existsSync(actorJsonPath)).toBe(true);
+      const data = JSON.parse(fs.readFileSync(actorJsonPath, 'utf-8'));
+
+      expect(data.title).toContain('GPSR');
+      expect(data.title).toContain('RAPEX');
+      expect(data.title).toContain('EAN Compliance');
+      expect(data.title).toBe('EU Safety Gate & Recall API (GPSR, RAPEX & EAN Compliance)');
+
+      expect(data.description).toContain('EAN Check');
+      expect(data.description).toContain('GPSR');
+
+      expect(data.categories).toBeDefined();
+      expect(Array.isArray(data.categories)).toBe(true);
+      expect(data.categories).toContain('ECOMMERCE');
+      expect(data.categories).toContain('AI');
+      expect(data.categories).toContain('LEAD_GENERATION');
+    });
+
+    it('Kriterium 2: PRICING.md und PPE-Dokumentation spiegeln $1.90/1.000 Results wider', () => {
+      expect(fs.existsSync(pricingMdPath)).toBe(true);
+      const pricingContent = fs.readFileSync(pricingMdPath, 'utf-8');
+      expect(pricingContent).toContain('1.90');
+      expect(pricingContent).toMatch(/1\.90\s*\/\s*1\.?000\s*Results/i);
+
+      // PPE-Dokumentation in STORE_DESCRIPTION.md und README.md
+      const storeContent = fs.readFileSync(storeDescPath, 'utf-8');
+      expect(storeContent).toContain('1.90');
+
+      const readmeContent = fs.readFileSync(readmePath, 'utf-8');
+      expect(readmeContent).toContain('1.90');
+    });
+
+    it('Kriterium 3: STORE_DESCRIPTION.md und COMPLIANCE.md sind konsistent und rechtssicher formuliert', () => {
+      const storeContent = fs.readFileSync(storeDescPath, 'utf-8');
+      expect(storeContent).toContain('REACH Chemical Recall Screening');
+
+      const readmeContent = fs.readFileSync(readmePath, 'utf-8');
+      expect(readmeContent).toContain('REACH Chemical Recall Screening');
+
+      const compContent = fs.readFileSync(compliancePath, 'utf-8');
+      expect(compContent).toContain('REACH Chemical Recall Screening');
+      expect(compContent).toContain('2011/833/EU');
+    });
+
+    it('Kriterium 4: Metadaten-Validierungs-Test läuft fehlerfrei durch', () => {
+      const a = JSON.parse(fs.readFileSync(actorJsonPath, 'utf-8'));
+      expect(a.title.includes('GPSR')).toBe(true);
+      expect(a.categories && a.categories.length >= 2).toBe(true);
+      const p = fs.readFileSync(pricingMdPath, 'utf-8');
+      expect(p.includes('1.90')).toBe(true);
+    });
+  });
 });
