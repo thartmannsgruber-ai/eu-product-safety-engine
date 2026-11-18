@@ -102,3 +102,10 @@ For platforms screening more than **500,000 barcodes per month** or requiring de
 - **Tier 1 (Up to 50k events/mo):** Standard PPE Tariff
 - **Tier 2 (50k - 500k events/mo):** 20% discount on `ean-checked` ($0.004 / unit)
 - **Tier 3 (500k+ events/mo):** 40% discount on `ean-checked` ($0.003 / unit) or flat-rate cluster licensing.
+
+
+---
+
+## 5. Legal Disclaimer & Information Notice
+
+*Important Legal Notice:* Data is derived from official European Commission Safety Gate notifications under Commission Decision 2011/833/EU. Screening results are provided for informational and preliminary compliance purposes only and do not constitute formal legal advice or a guarantee of non-recall. A zero-match result ("Kein Treffer bedeutet nicht, dass das Produkt sicher ist") indicates that no alert matching that specific barcode was recorded in the database; it does not replace the seller's or importer's statutory obligations under the EU General Product Safety Regulation (GPSR). Haftungsausschluss: Alle Angaben ohne Gewähr.
