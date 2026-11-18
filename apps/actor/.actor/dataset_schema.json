@@ -1,96 +1,124 @@
 {
-  "$schema": "https://json-schema.org/draft-07/schema#",
-  "title": "ProductSafetyEngine Alert Dataset",
-  "type": "object",
-  "schemaVersion": 1,
-  "properties": {
-    "alert_number": {
-      "type": "string",
-      "description": "Official EU Safety Gate alert notification number (e.g. A12/00001/26)."
-    },
-    "case_number": {
-      "type": "string",
-      "description": "Case number of the alert notification."
-    },
-    "publication_date": {
-      "type": "string",
-      "description": "Date when the alert was published (YYYY-MM-DD)."
-    },
-    "category": {
-      "type": "string",
-      "description": "Product category."
-    },
-    "product": {
-      "type": "string",
-      "description": "Product name or designation."
-    },
-    "brand": {
-      "type": "string",
-      "description": "Brand name."
-    },
-    "model": {
-      "type": "string",
-      "description": "Model number or description."
-    },
-    "ean_barcodes": {
-      "type": "array",
-      "items": {
-        "type": "string"
+  "actorSpecification": 1,
+  "fields": {
+    "title": "ProductSafetyEngine Alert Dataset",
+    "type": "object",
+    "properties": {
+      "alert_number": {
+        "type": "string",
+        "description": "Official EU Safety Gate alert notification number (e.g. A12/00001/26)."
       },
-      "description": "List of associated EAN/GTIN barcodes."
-    },
-    "risk_type": {
-      "type": "array",
-      "items": {
-        "type": "string"
+      "case_number": {
+        "type": "string",
+        "description": "Case number of the alert notification."
       },
-      "description": "Types of risk (e.g., Chemical, Choking, Fire)."
-    },
-    "danger_description": {
-      "type": "string",
-      "description": "Description of the hazard and danger."
-    },
-    "measures": {
-      "type": "string",
-      "description": "Compulsory or voluntary measures taken."
-    },
-    "notifying_country": {
-      "type": "string",
-      "description": "EU member state submitting the alert."
-    },
-    "country_of_origin": {
-      "type": "string",
-      "description": "Country where the product was manufactured."
-    },
-    "risk_level": {
-      "type": "string",
-      "description": "Risk level (e.g. Serious risk)."
-    },
-    "source_url": {
-      "type": "string",
-      "description": "Link to the official EU Safety Gate notification page."
-    },
-    "is_child_related": {
-      "type": "boolean",
-      "description": "Whether the alert belongs to toys, baby products, or items intended for children."
-    },
-    "child_age_group": {
-      "type": "string",
-      "enum": ["baby", "toddler", "child", "unknown"],
-      "description": "Target age group: baby, toddler, child, or unknown."
-    },
-    "child_hazards": {
-      "type": "array",
-      "items": {
-        "type": "string"
+      "publication_date": {
+        "type": "string",
+        "description": "Date when the alert was published (YYYY-MM-DD)."
       },
-      "description": "Child-specific hazards identified: choking, chemical, magnets."
-    }
+      "category": {
+        "type": "string",
+        "description": "Product category."
+      },
+      "product": {
+        "type": "string",
+        "description": "Product name or designation."
+      },
+      "brand": {
+        "type": "string",
+        "description": "Brand name."
+      },
+      "model": {
+        "type": "string",
+        "description": "Model number or description."
+      },
+      "ean_barcodes": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "List of associated EAN/GTIN barcodes."
+      },
+      "risk_type": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Types of risk (e.g., Chemical, Choking, Fire)."
+      },
+      "danger_description": {
+        "type": "string",
+        "description": "Description of the hazard and danger."
+      },
+      "measures": {
+        "type": "string",
+        "description": "Compulsory or voluntary measures taken."
+      },
+      "notifying_country": {
+        "type": "string",
+        "description": "EU member state submitting the alert."
+      },
+      "country_of_origin": {
+        "type": "string",
+        "description": "Country where the product was manufactured."
+      },
+      "risk_level": {
+        "type": "string",
+        "description": "Risk level (e.g. Serious risk)."
+      },
+      "source_url": {
+        "type": "string",
+        "description": "Link to the official EU Safety Gate notification page."
+      },
+      "is_child_related": {
+        "type": "boolean",
+        "description": "Whether the alert belongs to toys, baby products, or items intended for children."
+      },
+      "child_age_group": {
+        "type": "string",
+        "enum": ["baby", "toddler", "child", "unknown"],
+        "description": "Target age group: baby, toddler, child, or unknown."
+      },
+      "child_hazards": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Child-specific hazards identified: choking, chemical, magnets."
+      }
+    },
+    "required": [
+      "alert_number",
+      "category",
+      "product",
+      "risk_type"
+    ]
   },
-  "required": [
-    "alert_number",
-    "category",
-    "product",
-    "risk_type"
-  ]
+  "views": {
+    "overview": {
+      "title": "Overview",
+      "transformation": {
+        "fields": [
+          "alert_number",
+          "product",
+          "brand",
+          "category",
+          "risk_type",
+          "danger_description",
+          "is_child_related"
+        ]
+      },
+      "display": {
+        "component": "table",
+        "properties": {
+          "alert_number": { "label": "Alert Number" },
+          "product": { "label": "Product" },
+          "brand": { "label": "Brand" },
+          "category": { "label": "Category" },
+          "risk_type": { "label": "Risk Type" },
+          "is_child_related": { "label": "Child Related" }
+        }
+      }
+    }
+  }
 }

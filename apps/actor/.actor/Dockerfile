@@ -7,7 +7,7 @@ COPY packages/ ./packages/
 COPY apps/ ./apps/
 
 RUN npm --quiet set progress=false \
- && npm install \
+ && npm install --include=dev \
  && npm run build \
  && echo "Dependencies installed and build finished."
 
