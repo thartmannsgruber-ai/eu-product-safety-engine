@@ -3,7 +3,7 @@
   "name": "eu-product-safety-actor",
   "title": "EU Safety Gate & Recall API (GPSR, RAPEX & EAN Compliance)",
   "description": "Apify Actor for querying EU Product Safety Gate (RAPEX) recall alerts, automated EAN Check & GTIN barcode validation, GPSR compliance screening, and monitoring weekly safety notices with Pay-Per-Event (PPE) pricing.",
-  "version": "1.0.0",
+  "version": "1.0",
   "categories": [
     "ECOMMERCE",
     "AI",
