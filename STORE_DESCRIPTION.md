@@ -4,9 +4,9 @@
 > Screen supplier catalogs, GTIN/EAN barcodes, and weekly recalls against official EU Safety Gate & REACH datasets in real time.
 
 [![Apify Actor](https://img.shields.io/badge/Apify-Pay--Per--Event-orange.svg)](https://apify.com)
-[![Model Context Protocol](https://img.shields.io/badge/MCP-Certified%20Tools-blue.svg)](https://modelcontextprotocol.io)
+[![Model Context Protocol](https://img.shields.io/badge/MCP-Ready%20Tools-blue.svg)](https://modelcontextprotocol.io)
 [![EU Safety Gate](https://img.shields.io/badge/EU%20Safety%20Gate-RAPEX%20Indexed-green.svg)](https://ec.europa.eu/safety-gate-alerts/)
-[![GPSR Ready](https://img.shields.io/badge/EU%20GPSR%202023%2F988-Compliant-success.svg)](https://eur-lex.europa.eu/eli/reg/2023/988/oj)
+[![GPSR Ready](https://img.shields.io/badge/EU%20GPSR%202023%2F988-Screening%20Engine-success.svg)](https://eur-lex.europa.eu/eli/reg/2023/988/oj)
 
 ---
 
@@ -23,7 +23,7 @@ Under the **EU General Product Safety Regulation (GPSR - EU 2023/988)** and the 
 
 ## The Solution: Automated Product Safety & Recall Screening
 
-**EU Product Safety & Recall Engine** is the enterprise-grade automated bridge between official EU Commission data and your daily operations. 
+**EU Product Safety & Recall Engine** is the automated bridge between official EU Commission data and your daily operations. 
 
 Whether you operate an automated Apify pipeline, an e-commerce catalog sync, or autonomous AI agents via the **Model Context Protocol (MCP)**, this engine enables you to:
 
