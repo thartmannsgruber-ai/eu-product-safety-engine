@@ -1,0 +1,13 @@
+{
+  "actorOutputSchemaVersion": 1,
+  "title": "EU Safety Gate & Recall API Output Schema",
+  "description": "Verified EU Safety Gate (RAPEX) recall alerts, GTIN barcode validation, and GPSR compliance screening dataset.",
+  "properties": {
+    "overview": {
+      "type": "string",
+      "title": "Overview",
+      "description": "Dataset view containing verified EU Safety Gate recall alerts",
+      "template": "{{links.apiDefaultDatasetUrl}}/items?view=overview"
+    }
+  }
+}
