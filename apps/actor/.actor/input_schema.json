@@ -36,6 +36,27 @@
       "description": "Publication week filter (e.g. '2026-W45', '2026-45' or '45').",
       "editor": "textfield"
     },
+    "childProductsOnly": {
+      "title": "Child & Baby Products Only",
+      "type": "boolean",
+      "description": "Filter strictly for toys, baby items, children's clothing and products intended for kids.",
+      "default": false,
+      "editor": "checkbox"
+    },
+    "ageGroup": {
+      "title": "Child Age Group",
+      "type": "string",
+      "description": "Filter by target age group: 'baby' (0-12m), 'toddler' (1-3y), 'child' (toys/general kids).",
+      "editor": "select",
+      "enum": ["baby", "toddler", "child", "unknown"]
+    },
+    "hazard": {
+      "title": "Child Specific Hazard",
+      "type": "string",
+      "description": "Filter by primary child hazard: 'choking' (small parts), 'chemical' (PFAS, phthalates), 'magnets' (flux index).",
+      "editor": "select",
+      "enum": ["choking", "chemical", "magnets"]
+    },
     "refreshData": {
       "title": "Live Data Refresh",
       "type": "boolean",

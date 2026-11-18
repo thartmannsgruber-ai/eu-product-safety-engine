@@ -118,11 +118,12 @@ Das Projekt ist als **npm Workspace-Monorepo** organisiert:
 ### 4. apps/mcp
 - **Offizieller MCP Stdio Transport:** Basiert auf `@modelcontextprotocol/sdk`.
 - **Sicherheits-Sanitizer:** Filtert Prompt-Injections, Steuerzeichen und gefährliche Escape-Sequenzen.
-- **Die 4 Agenten-Tools:**
+- **Die 5 Agenten-Tools:**
   1. `check_ean_safety`: EAN-Prüfung gegen die Datenbank mit ZWINGENDEM Sicherheits-Disclaimer bei 0 Treffern.
-  2. `search_product_recalls`: Freitext- und Kategoriesuche nach Marke, Modell und Gefahrenart.
-  3. `get_chemical_restrictions`: Gezielte Filterung nach chemischen Gefahren (REACH, Phthalate, Blei, Cadmium, SVHC).
-  4. `monitor_weekly_alerts`: Abfrage der neuesten wöchentlichen Sicherheitsberichte.
+  2. `screen_children_products`: Gezielte Erkennung von Spielzeug-, Baby- und Kindergefahren (Erstickung, PFAS/Phthalate, Magnete).
+  3. `search_product_recalls`: Freitext- und Kategoriesuche nach Marke, Modell und Gefahrenart.
+  4. `get_chemical_restrictions`: Gezielte Filterung nach chemischen Gefahren (REACH, Phthalate, Blei, Cadmium, SVHC).
+  5. `monitor_weekly_alerts`: Abfrage der neuesten wöchentlichen Sicherheitsberichte.
 - **PaymentGate (`payment.ts`):** Vorbereitetes Interface für HTTP 402 / Stripe Machine Payments Protocol (MPP).
 
 ---

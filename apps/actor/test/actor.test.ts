@@ -650,4 +650,36 @@ describe('F07: Apify Actor Struktur & Konfiguration', () => {
       expect(p.includes('1.90')).toBe(true);
     });
   });
+
+  describe('Child & Baby Safety Pack Actor Filtering', () => {
+    it('filters strictly for child products when childProductsOnly is true', async () => {
+      const storage = new SqliteAlertStorage(':memory:', { autoSeed: true });
+      const emitter = new PpeEventEmitter();
+
+      const result = await runActor(
+        { childProductsOnly: true, maxItems: 100 },
+        { storage, emitter, pushData: false }
+      );
+
+      expect(result.items.length).toBe(26);
+      expect(emitter.getEventCount(PPE_EVENTS.ALERT_RETURNED)).toBe(26);
+    });
+
+    it('filters child products by hazard: choking and chemical', async () => {
+      const storage = new SqliteAlertStorage(':memory:', { autoSeed: true });
+      const emitter = new PpeEventEmitter();
+
+      const chokingResult = await runActor(
+        { childProductsOnly: true, hazard: 'choking' },
+        { storage, emitter, pushData: false }
+      );
+      expect(chokingResult.items.length).toBeGreaterThan(0);
+
+      const chemicalResult = await runActor(
+        { childProductsOnly: true, hazard: 'chemical' },
+        { storage, emitter, pushData: false }
+      );
+      expect(chemicalResult.items.length).toBeGreaterThan(0);
+    });
+  });
 });

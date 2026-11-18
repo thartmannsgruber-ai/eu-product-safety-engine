@@ -4,6 +4,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { type AlertRecord, normalizeAlerts } from './schema.js';
 import { cleanBarcode, normalizeToGtin14 } from './gtin.js';
 import { parseSafetyGateFileSync } from './parser.js';
+import { classifyChildProduct, type ChildAgeGroup, type ChildHazard } from './child-safety.js';
 
 /**
  * Error raised when an alert query is attempted against an uninitialized or empty database.
@@ -31,6 +32,9 @@ export interface AlertSearchQuery {
   risk_level?: string;
   notifying_country?: string;
   country_of_origin?: string;
+  childProductsOnly?: boolean;
+  ageGroup?: ChildAgeGroup;
+  hazard?: ChildHazard;
   limit?: number;
   offset?: number;
 }
@@ -344,6 +348,19 @@ export class MemoryAlertStorage implements IAlertStorage {
       }
       if (countryOfOriginFilter && !(alert.country_of_origin ?? '').toLowerCase().includes(countryOfOriginFilter)) {
         continue;
+      }
+
+      if (options.childProductsOnly || options.ageGroup || options.hazard) {
+        const classification = classifyChildProduct(alert);
+        if (options.childProductsOnly && !classification.isChildRelated) {
+          continue;
+        }
+        if (options.ageGroup && classification.ageGroup !== options.ageGroup) {
+          continue;
+        }
+        if (options.hazard && !classification.hazards.includes(options.hazard)) {
+          continue;
+        }
       }
 
       results.push(alert);
@@ -796,6 +813,30 @@ export class SqliteAlertStorage implements IAlertStorage {
       WHERE ${clauses.join(' AND ')}
       ORDER BY a.publication_date DESC, a.alert_number ASC
     `;
+
+    const hasChildFilter = Boolean(options.childProductsOnly || options.ageGroup || options.hazard);
+    if (hasChildFilter) {
+      const rows = this.db.prepare(sql).all(...params) as Record<string, unknown>[];
+      const allAlerts = rows.map((row) => this.mapRowToAlertRecord(row));
+      const filtered = allAlerts.filter((alert) => {
+        const classification = classifyChildProduct(alert);
+        if (options.childProductsOnly && !classification.isChildRelated) {
+          return false;
+        }
+        if (options.ageGroup && classification.ageGroup !== options.ageGroup) {
+          return false;
+        }
+        if (options.hazard && !classification.hazards.includes(options.hazard)) {
+          return false;
+        }
+        return true;
+      });
+      const offset = options.offset ?? 0;
+      if (options.limit !== undefined) {
+        return filtered.slice(offset, offset + options.limit);
+      }
+      return offset > 0 ? filtered.slice(offset) : filtered;
+    }
 
     if (options.limit !== undefined) {
       sql += ' LIMIT ?';

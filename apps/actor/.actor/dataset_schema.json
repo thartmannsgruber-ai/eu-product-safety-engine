@@ -69,6 +69,22 @@
     "source_url": {
       "type": "string",
       "description": "Link to the official EU Safety Gate notification page."
+    },
+    "is_child_related": {
+      "type": "boolean",
+      "description": "Whether the alert belongs to toys, baby products, or items intended for children."
+    },
+    "child_age_group": {
+      "type": "string",
+      "enum": ["baby", "toddler", "child", "unknown"],
+      "description": "Target age group: baby, toddler, child, or unknown."
+    },
+    "child_hazards": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Child-specific hazards identified: choking, chemical, magnets."
     }
   },
   "required": [

@@ -14,6 +14,7 @@ import {
   isValidEan,
   SqliteAlertStorage,
   EmptyDatabaseError,
+  classifyChildProduct,
 } from '@productsafetyengine/core';
 import { syncSafetyGate } from '@productsafetyengine/fetcher';
 import {
@@ -110,6 +111,9 @@ export const ActorInputSchema = z
       .optional()
       .transform((val) => (val && val.length > 0 ? val : undefined)),
     woche: z.string().trim().optional(),
+    childProductsOnly: z.coerce.boolean().optional(),
+    ageGroup: z.enum(['baby', 'toddler', 'child', 'unknown']).optional(),
+    hazard: z.enum(['choking', 'chemical', 'magnets']).optional(),
     refreshData: z.coerce.boolean().optional(),
     maxItems: z.coerce.number().int().positive().default(100),
   }))
@@ -123,6 +127,9 @@ export const ActorInputSchema = z
       category: data.category,
       query,
       week,
+      childProductsOnly: data.childProductsOnly,
+      ageGroup: data.ageGroup,
+      hazard: data.hazard,
       refreshData: data.refreshData,
       maxItems: data.maxItems,
     };
@@ -281,11 +288,17 @@ export async function runActor(
     addUniqueAlerts(weeklyMatches);
   }
 
-  // 3. Filter nach Freitext-Suchbegriff oder Kategorie
-  if ((input.query || input.category) && matchedAlerts.length < input.maxItems) {
+  // 3. Filter nach Freitext-Suchbegriff, Kategorie oder Kinder-Sicherheitskriterien
+  if (
+    (input.query || input.category || input.childProductsOnly || input.ageGroup || input.hazard) &&
+    matchedAlerts.length < input.maxItems
+  ) {
     const searchMatches = await storage.findAlerts({
       query: input.query,
       category: input.category,
+      childProductsOnly: input.childProductsOnly,
+      ageGroup: input.ageGroup,
+      hazard: input.hazard,
       limit: input.maxItems - matchedAlerts.length,
     });
 
@@ -304,7 +317,10 @@ export async function runActor(
     eansToProcess.length === 0 &&
     !input.week &&
     !input.query &&
-    !input.category
+    !input.category &&
+    !input.childProductsOnly &&
+    !input.ageGroup &&
+    !input.hazard
   ) {
     const defaultMatches = await storage.findAlerts({
       limit: input.maxItems,
@@ -322,9 +338,19 @@ export async function runActor(
     await (emitter as any).waitForPendingCharges();
   }
 
+  const datasetItems = matchedAlerts.map((alert) => {
+    const classification = classifyChildProduct(alert);
+    return {
+      ...alert,
+      is_child_related: classification.isChildRelated,
+      child_age_group: classification.ageGroup,
+      child_hazards: classification.hazards,
+    };
+  });
+
   // 6. Apify Dataset Integration: Gefundene Alert-Datensaetze via Actor.pushData() exportieren
   if (options.pushData !== false) {
-    await pushApifyData(matchedAlerts);
+    await pushApifyData(datasetItems);
   }
 
   return {

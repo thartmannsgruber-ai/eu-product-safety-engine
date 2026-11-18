@@ -27,6 +27,7 @@ import {
   executeSearchProductRecalls,
   executeGetChemicalRestrictions,
   executeMonitorWeeklyAlerts,
+  executeScreenChildrenProducts,
 } from '../src/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -104,6 +105,7 @@ describe('apps/mcp - Die 4 MCP Tools fuer Agenten (F09)', () => {
       expect(toolNames).toContain('search_product_recalls');
       expect(toolNames).toContain('get_chemical_restrictions');
       expect(toolNames).toContain('monitor_weekly_alerts');
+      expect(toolNames).toContain('screen_children_products');
     });
 
     it('liefert fuer alle 4 Tools aussagekraeftige Beschreibungen und Schemas', async () => {
@@ -478,6 +480,30 @@ describe('apps/mcp - Die 4 MCP Tools fuer Agenten (F09)', () => {
 
       expect(data.isLatestWeek).toBe(true);
       expect(data.week).toBe('45');
+    });
+
+    it('executeScreenChildrenProducts filtert Treffer fuer Kinder & Spielzeug', async () => {
+      const result = await executeScreenChildrenProducts({ limit: 50 }, storage);
+      const data = JSON.parse(result.content[0].text);
+
+      expect(data.childProductsOnly).toBe(true);
+      expect(data.count).toBe(27);
+      expect(data.disclaimer).toBe(NO_HIT_SAFETY_DISCLAIMER);
+      expect(data.alerts.length).toBe(27);
+      expect(data.alerts[0].is_child_related).toBe(true);
+    });
+
+    it('executeScreenChildrenProducts filtert gezielt nach Gefahr choking und magnets', async () => {
+      const chokingRes = await executeScreenChildrenProducts({ hazard: 'choking' }, storage);
+      const chokingData = JSON.parse(chokingRes.content[0].text);
+      expect(chokingData.count).toBeGreaterThan(0);
+
+      const magnetRes = await executeScreenChildrenProducts({ hazard: 'magnets' }, storage);
+      const magnetData = JSON.parse(magnetRes.content[0].text);
+      expect(magnetData.count).toBeGreaterThan(0);
+      for (const a of magnetData.alerts) {
+        expect(a.hazards).toContain('magnets');
+      }
     });
   });
 });

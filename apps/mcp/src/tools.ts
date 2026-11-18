@@ -18,6 +18,7 @@ import {
   SqliteAlertStorage,
   EmptyDatabaseError,
   parseYearWeekFromAlert,
+  classifyChildProduct,
 } from '@productsafetyengine/core';
 import { sanitizeInput } from './sanitizer.js';
 
@@ -521,6 +522,91 @@ export async function executeMonitorWeeklyAlerts(
   };
 }
 
+export const ScreenChildrenProductsSchema = {
+  query: z
+    .string()
+    .trim()
+    .optional()
+    .describe('Optional search term (e.g. toy name, brand, model, material)'),
+  ageGroup: z
+    .enum(['baby', 'toddler', 'child', 'unknown'])
+    .optional()
+    .describe('Target age group: "baby" (0-12m), "toddler" (1-3y), "child" (general kids/toys)'),
+  hazard: z
+    .enum(['choking', 'chemical', 'magnets'])
+    .optional()
+    .describe('Filter by child hazard: "choking" (small parts), "chemical" (PFAS, phthalates), "magnets" (flux index)'),
+  limit: z
+    .number()
+    .int()
+    .positive()
+    .max(100)
+    .default(20)
+    .describe('Maximum number of alerts to return (1-100, default: 20)'),
+};
+
+export async function executeScreenChildrenProducts(
+  args: {
+    query?: string;
+    ageGroup?: 'baby' | 'toddler' | 'child' | 'unknown';
+    hazard?: 'choking' | 'chemical' | 'magnets';
+    limit?: number;
+  },
+  storage: IAlertStorage
+) {
+  const totalInDb = await storage.count();
+  if (totalInDb === 0) {
+    throw new EmptyDatabaseError(
+      'Safety Gate database is uninitialized (0 records). Ensure autoSeed is active or data is populated.'
+    );
+  }
+
+  const sanitizedQuery = args.query ? sanitizeInput(args.query) : undefined;
+  const alerts = await storage.findAlerts({
+    query: sanitizedQuery,
+    childProductsOnly: true,
+    ageGroup: args.ageGroup,
+    hazard: args.hazard,
+    limit: args.limit ?? 20,
+  });
+
+  const enriched = alerts.map((alert) => {
+    const classification = classifyChildProduct(alert);
+    return {
+      alert_number: alert.alert_number,
+      product: alert.product,
+      brand: alert.brand,
+      category: alert.category,
+      risk_type: alert.risk_type,
+      danger_description: alert.danger_description,
+      is_child_related: classification.isChildRelated,
+      age_group: classification.ageGroup,
+      hazards: classification.hazards,
+      ean_barcodes: alert.ean_barcodes,
+    };
+  });
+
+  return {
+    content: [
+      {
+        type: 'text' as const,
+        text: JSON.stringify(
+          {
+            count: enriched.length,
+            childProductsOnly: true,
+            filterAgeGroup: args.ageGroup ?? null,
+            filterHazard: args.hazard ?? null,
+            disclaimer: NO_HIT_SAFETY_DISCLAIMER,
+            alerts: enriched,
+          },
+          null,
+          2
+        ),
+      },
+    ],
+  };
+}
+
 // ============================================================================
 // MCP-Tool-Registrierung
 // ============================================================================
@@ -530,7 +616,7 @@ export interface RegisterToolsOptions {
 }
 
 /**
- * Registriert die exakt 4 definierten ProductSafetyEngine Tools auf dem McpServer.
+ * Registriert die ProductSafetyEngine Tools auf dem McpServer.
  */
 export function registerTools(
   server: McpServer,
@@ -580,6 +666,16 @@ export function registerTools(
     MonitorWeeklyAlertsSchema,
     async (args) => {
       return executeMonitorWeeklyAlerts(args, holder.storage);
+    }
+  );
+
+  // 5. Tool: screen_children_products
+  server.tool(
+    'screen_children_products',
+    'Screens product recalls specifically for toys, baby products, and children goods with ageGroup and hazard filters (choking, chemical/PFAS, magnets).',
+    ScreenChildrenProductsSchema,
+    async (args) => {
+      return executeScreenChildrenProducts(args, holder.storage);
     }
   );
 }

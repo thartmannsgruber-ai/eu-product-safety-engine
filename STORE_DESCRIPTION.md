@@ -49,10 +49,17 @@ Whether you operate an automated Apify pipeline, an e-commerce catalog sync, or 
 - Targeted filtering for hazardous chemical alerts under the REACH regulation (EC 1907/2006).
 - Instant detection of restricted substances: Lead, Cadmium, Nickel release, Phthalates (DEHP, DBP, BBP, DIBP), PFOS/PFAS, and SVHC candidates.
 
-### 4. Zero-Friction AI Agent Integration (MCP Protocol)
+### 4. Child, Baby & Toy Safety Intelligence
+- Dedicated screening for toys, baby gear, nursery items, and children's textiles (representing >35% of all EU safety alerts).
+- Pre-built hazard detection for **choking hazards** (small parts, cords), **toxic chemicals** (PFAS, phthalates), and **dangerous magnets** (flux index).
+- Age-group classification: `baby` (0-12m), `toddler` (1-3y), `child` (general toys & apparel).
+- Dedicated MCP tool `screen_children_products` for parenting assistants, school supply buyers, and toy merchants.
+
+### 5. Zero-Friction AI Agent Integration (MCP Protocol)
 - Full compatibility with the official **Model Context Protocol (MCP)** via `stdio`.
-- 4 production-ready tools:
+- 5 production-ready tools:
   - `check_ean_safety`: Validates barcodes with required legal disclaimers.
+  - `screen_children_products`: Specialized child, baby, and toy safety screening.
   - `search_product_recalls`: Structured recall lookup.
   - `get_chemical_restrictions`: Hazardous substance checks.
   - `monitor_weekly_alerts`: Timely weekly digests.
