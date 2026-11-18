@@ -1,6 +1,8 @@
 {
   "name": "@productsafetyengine/mcp",
   "version": "1.0.0",
+  "private": true,
+  "license": "UNLICENSED",
   "type": "module",
   "bin": {
     "eu-product-safety-mcp": "./dist/index.js"

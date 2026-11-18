@@ -31,7 +31,7 @@ import {
  * - category: Produktkategorie
  * - query: Freitext-Suchbegriff (mit Aliassen searchTerm & suchbegriff)
  * - week: Publikationswoche (z.B. '2026-W45', '2026-45' oder '45')
- * - maxItems: Maximale Anzahl Datensaetze (Default 100)
+ * - maxItems: Maximale Anzahl Datensaetze (Default 20, max. 50 gedrosselt gegen Scraping)
  */
 export const ActorInputSchema = z
   .preprocess((raw) => {
@@ -115,7 +115,7 @@ export const ActorInputSchema = z
     ageGroup: z.enum(['baby', 'toddler', 'child', 'unknown']).optional(),
     hazard: z.enum(['choking', 'chemical', 'magnets']).optional(),
     refreshData: z.coerce.boolean().optional(),
-    maxItems: z.coerce.number().int().positive().default(100),
+    maxItems: z.coerce.number().int().positive().default(20).transform((val) => Math.min(val, 50)),
   }))
   .transform((data) => {
     // Alias-Handling

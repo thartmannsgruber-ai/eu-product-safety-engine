@@ -1,6 +1,8 @@
 {
   "name": "@productsafetyengine/core",
   "version": "1.0.0",
+  "private": true,
+  "license": "UNLICENSED",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

@@ -67,10 +67,10 @@
     "maxItems": {
       "title": "Maximum Items",
       "type": "integer",
-      "description": "Maximum number of alert items to return in the dataset.",
-      "default": 100,
+      "description": "Maximum number of alert items to return in the dataset (capped at 50 per run to prevent wholesale data dumping).",
+      "default": 20,
       "minimum": 1,
-      "maximum": 5000,
+      "maximum": 50,
       "editor": "number"
     }
   }

@@ -3,7 +3,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x%20strict-blue.svg)](https://www.typescriptlang.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-22.x-green.svg)](https://nodejs.org/)
 [![Vitest](https://img.shields.io/badge/Tests-Vitest%20100%25%20Offline-brightgreen.svg)](https://vitest.dev/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: Proprietary](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
 
 > **High-Performance B2B Data Engine & Model Context Protocol (MCP) Server für EU-Produktsicherheits- und Rückrufdaten (Safety Gate / RAPEX & REACH Chemical Recall Screening).**
 
@@ -226,4 +226,5 @@ Ausführliche rechtliche Hinweise, Haftungsausschlüsse und Quellenangaben finde
 
 ## Lizenz
 
-Dieses Projekt ist unter der **MIT-Lizenz** lizenziert. Weitere Details siehe [LICENSE](LICENSE).
+**Proprietary / All rights reserved.** Copyright (c) 2026 Thomas Hartmannsgruber.
+Die kommerzielle Weiterverbreitung, das Reverse Engineering oder das unautorisierte Hosting als eigener Service sind strengstens untersagt. Weitere Details siehe [LICENSE](LICENSE).

@@ -135,12 +135,14 @@ describe('F07: Apify Actor Struktur & Konfiguration', () => {
       expect(fs.existsSync(datasetPath)).toBe(true);
 
       const dataset = JSON.parse(fs.readFileSync(datasetPath, 'utf-8'));
-      expect(dataset.type).toBe('object');
-      expect(dataset.properties.alert_number).toBeDefined();
-      expect(dataset.properties.category).toBeDefined();
-      expect(dataset.properties.product).toBeDefined();
-      expect(dataset.properties.ean_barcodes).toBeDefined();
-      expect(dataset.properties.risk_type).toBeDefined();
+      const props = dataset.fields ? dataset.fields.properties : dataset.properties;
+      const type = dataset.fields ? dataset.fields.type : dataset.type;
+      expect(type).toBe('object');
+      expect(props.alert_number).toBeDefined();
+      expect(props.category).toBeDefined();
+      expect(props.product).toBeDefined();
+      expect(props.ean_barcodes).toBeDefined();
+      expect(props.risk_type).toBeDefined();
     });
 
     it('validiert und normalisiert ActorInput via Zod-Schema inkl. Aliassen', () => {
@@ -165,7 +167,11 @@ describe('F07: Apify Actor Struktur & Konfiguration', () => {
       });
       expect(parsedAliases.query).toBe('Puppenwagen');
       expect(parsedAliases.week).toBe('45');
-      expect(parsedAliases.maxItems).toBe(100); // Default
+      expect(parsedAliases.maxItems).toBe(20); // Default capped at 20
+
+      // Anti-Scraping Cap: values > 50 are clamped to 50
+      const parsedClamped = ActorInputSchema.parse({ maxItems: 1000 });
+      expect(parsedClamped.maxItems).toBe(50);
     });
   });
 
