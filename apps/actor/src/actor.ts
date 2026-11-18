@@ -22,48 +22,105 @@ import {
 /**
  * Zod-Schema fuer Actor-Inputs mit Filtern gemaess .actor/input_schema.json:
  * - ean: EAN-8, EAN-13, UPC oder GTIN Barcode
+ * - eans: Array oder mehrzeiliger Text von Barcodes fuer Batch-Screening
  * - category: Produktkategorie
  * - query: Freitext-Suchbegriff (mit Aliassen searchTerm & suchbegriff)
  * - week: Publikationswoche (z.B. '2026-W45', '2026-45' oder '45')
  * - maxItems: Maximale Anzahl Datensaetze (Default 100)
  */
-export const ActorInputSchema = z.object({
-  ean: z
-    .string()
-    .trim()
-    .optional()
-    .transform((val) => (val && val.length > 0 ? val : undefined)),
-  category: z
-    .string()
-    .trim()
-    .optional()
-    .transform((val) => (val && val.length > 0 ? val : undefined)),
-  query: z
-    .string()
-    .trim()
-    .optional()
-    .transform((val) => (val && val.length > 0 ? val : undefined)),
-  searchTerm: z.string().trim().optional(),
-  suchbegriff: z.string().trim().optional(),
-  week: z
-    .string()
-    .trim()
-    .optional()
-    .transform((val) => (val && val.length > 0 ? val : undefined)),
-  woche: z.string().trim().optional(),
-  maxItems: z.coerce.number().int().positive().default(100),
-}).transform((data) => {
-  // Alias-Handling
-  const query = data.query ?? data.searchTerm ?? data.suchbegriff;
-  const week = data.week ?? data.woche;
-  return {
-    ean: data.ean,
-    category: data.category,
-    query,
-    week,
-    maxItems: data.maxItems,
-  };
-});
+export const ActorInputSchema = z
+  .preprocess((raw) => {
+    if (Array.isArray(raw)) {
+      if (raw.length === 0) return {};
+      if (raw.length === 1) return raw[0];
+      const allEans: string[] = [];
+      let base: Record<string, unknown> = {};
+      for (const item of raw) {
+        if (item && typeof item === 'object') {
+          base = { ...base, ...item };
+          if ('ean' in item && typeof (item as any).ean === 'string' && (item as any).ean.trim()) {
+            allEans.push((item as any).ean.trim());
+          }
+          if ('eans' in item) {
+            const itemEans = (item as any).eans;
+            if (Array.isArray(itemEans)) {
+              for (const e of itemEans) {
+                if (typeof e === 'string' && e.trim()) allEans.push(e.trim());
+              }
+            } else if (typeof itemEans === 'string' && itemEans.trim()) {
+              allEans.push(
+                ...itemEans
+                  .split(/[\r\n,]+/)
+                  .map((s: string) => s.trim())
+                  .filter(Boolean)
+              );
+            }
+          }
+        }
+      }
+      delete (base as Record<string, unknown>).ean;
+      return {
+        ...base,
+        eans: allEans.length > 0 ? allEans : undefined,
+      };
+    }
+    return raw;
+  }, z.object({
+    ean: z
+      .string()
+      .trim()
+      .optional()
+      .transform((val) => (val && val.length > 0 ? val : undefined)),
+    eans: z
+      .preprocess((val) => {
+        if (typeof val === 'string') {
+          const parts = val
+            .split(/[\r\n,]+/)
+            .map((s) => s.trim())
+            .filter((s) => s.length > 0);
+          return parts.length > 0 ? parts : undefined;
+        }
+        if (Array.isArray(val)) {
+          const parts = val
+            .map((s) => (typeof s === 'string' ? s.trim() : s))
+            .filter((s) => typeof s === 'string' && s.length > 0);
+          return parts.length > 0 ? parts : undefined;
+        }
+        return val;
+      }, z.array(z.string()).optional()),
+    category: z
+      .string()
+      .trim()
+      .optional()
+      .transform((val) => (val && val.length > 0 ? val : undefined)),
+    query: z
+      .string()
+      .trim()
+      .optional()
+      .transform((val) => (val && val.length > 0 ? val : undefined)),
+    searchTerm: z.string().trim().optional(),
+    suchbegriff: z.string().trim().optional(),
+    week: z
+      .string()
+      .trim()
+      .optional()
+      .transform((val) => (val && val.length > 0 ? val : undefined)),
+    woche: z.string().trim().optional(),
+    maxItems: z.coerce.number().int().positive().default(100),
+  }))
+  .transform((data) => {
+    // Alias-Handling
+    const query = data.query ?? data.searchTerm ?? data.suchbegriff;
+    const week = data.week ?? data.woche;
+    return {
+      ean: data.ean,
+      eans: data.eans,
+      category: data.category,
+      query,
+      week,
+      maxItems: data.maxItems,
+    };
+  });
 
 export type ActorInput = z.infer<typeof ActorInputSchema>;
 
@@ -75,6 +132,7 @@ export interface ActorRunOptions {
 export interface ActorRunResult {
   items: AlertRecord[];
   totalCount: number;
+  invalid_eans: string[];
   eventSummary: Record<PPEEventType, number>;
   totalCostUsd: number;
   ppeEventsTriggered: number;
@@ -119,14 +177,34 @@ export async function runActor(
     }
   };
 
-  // 1. Filter nach EAN / GTIN
-  if (input.ean) {
-    const valid = isValidEan(input.ean);
-    const eanMatches = await storage.getByEan(input.ean);
+  // 1. Filter nach EAN / GTIN (Einzel- und Batch-Screening)
+  const eansToProcess: string[] = [];
+  if (input.eans && Array.isArray(input.eans)) {
+    for (const e of input.eans) {
+      if (typeof e === 'string' && e.trim().length > 0) {
+        eansToProcess.push(e.trim());
+      }
+    }
+  }
+  if (input.ean && !eansToProcess.includes(input.ean)) {
+    eansToProcess.unshift(input.ean);
+  }
+
+  const invalidEans: string[] = [];
+
+  for (const ean of eansToProcess) {
+    const valid = isValidEan(ean);
+    if (!valid) {
+      if (!invalidEans.includes(ean)) {
+        invalidEans.push(ean);
+      }
+    }
+
+    const eanMatches = await storage.getByEan(ean);
 
     // Pay-Per-Event: 'ean-checked' ausloesen
     emitter.emitEanChecked({
-      ean: input.ean,
+      ean,
       validGtin: valid,
       matchCount: eanMatches.length,
     });
@@ -181,7 +259,7 @@ export async function runActor(
 
   // 4. Wenn ueberhaupt kein Filter gesetzt wurde: Alle Alerts bis maxItems laden
   if (
-    !input.ean &&
+    eansToProcess.length === 0 &&
     !input.week &&
     !input.query &&
     !input.category
@@ -200,6 +278,7 @@ export async function runActor(
   return {
     items: matchedAlerts,
     totalCount: matchedAlerts.length,
+    invalid_eans: invalidEans,
     eventSummary: emitter.getEventCounts(),
     totalCostUsd: emitter.calculateEstimatedCost(),
     ppeEventsTriggered: emitter.getTotalEvents(),

@@ -9,6 +9,15 @@
       "description": "EAN-8, EAN-13, UPC or GTIN barcode to verify against EU Safety Gate recalls (e.g. 5054298241091).",
       "editor": "textfield"
     },
+    "eans": {
+      "title": "Batch EANs / Barcodes",
+      "type": "array",
+      "description": "Array of EAN-8, EAN-13, UPC or GTIN barcodes for batch screening of e-commerce catalogs.",
+      "editor": "stringList",
+      "items": {
+        "type": "string"
+      }
+    },
     "category": {
       "title": "Category / Kategorie",
       "type": "string",

@@ -346,4 +346,120 @@ describe('F07: Apify Actor Struktur & Konfiguration', () => {
       expect(emitter.getEventCount(PPE_EVENTS.ALERT_RETURNED)).toBe(5);
     });
   });
+
+  describe('F02_BATCH_EAN_SCREENING: Batch / batch EAN-Screening für E-Commerce-Kataloge', () => {
+    let storage: MemoryAlertStorage;
+
+    beforeEach(() => {
+      storage = new MemoryAlertStorage();
+      const parsed = parseSafetyGateFileSync(FIXTURE_PATH);
+      const normalized = normalizeAlerts(parsed.notifications);
+      storage.insertAlerts(normalized);
+    });
+
+    it('Kriterium 1: ActorInputSchema akzeptiert eans: z.array(z.string()).optional() (batch)', () => {
+      // 1. Array von EAN-Strings
+      const parsedArray = ActorInputSchema.parse({
+        eans: ['5054298241091', '4099979071513'],
+      });
+      expect(parsedArray.eans).toEqual(['5054298241091', '4099979071513']);
+
+      // 2. Optional: undefined / nicht uebergeben
+      const parsedEmpty = ActorInputSchema.parse({});
+      expect(parsedEmpty.eans).toBeUndefined();
+
+      // 3. Mehrzeiliger Text (z.B. aus Apify UI Textarea)
+      const parsedMultiline = ActorInputSchema.parse({
+        eans: '5054298241091\n4099979071513',
+      });
+      expect(parsedMultiline.eans).toEqual(['5054298241091', '4099979071513']);
+
+      // 4. input_schema.json enthaelt eans als Typ array
+      const inputSchemaPath = path.join(ACTOR_DIR, '.actor/input_schema.json');
+      const data = JSON.parse(fs.readFileSync(inputSchemaPath, 'utf-8'));
+      expect(data.properties.eans).toBeDefined();
+      expect(data.properties.eans.type).toBe('array');
+      expect(data.properties.eans.items?.type).toBe('string');
+    });
+
+    it('Kriterium 2: runActor([{ ean: "..." }]) und runActor([{ eans: ["...", "..."] }]) funktionieren nahtlos (batch)', async () => {
+      // Test 2a: runActor mit Array aus einem Objekt mit ean
+      const emitterA = new PpeEventEmitter();
+      const resultA = await runActor(
+        [{ ean: '5054298241091' }],
+        { storage, emitter: emitterA }
+      );
+      expect(resultA.items.length).toBeGreaterThanOrEqual(1);
+      expect(resultA.items.some((i) => i.ean_barcodes.includes('5054298241091'))).toBe(true);
+      expect(emitterA.getEventCount(PPE_EVENTS.EAN_CHECKED)).toBe(1);
+
+      // Test 2b: runActor mit Array aus einem Objekt mit eans-Array
+      const emitterB = new PpeEventEmitter();
+      const resultB = await runActor(
+        [{ eans: ['5054298241091', '4099979071513'] }],
+        { storage, emitter: emitterB }
+      );
+      expect(resultB.items.length).toBeGreaterThanOrEqual(2);
+      expect(resultB.items.some((i) => i.ean_barcodes.includes('5054298241091'))).toBe(true);
+      expect(resultB.items.some((i) => i.ean_barcodes.includes('4099979071513'))).toBe(true);
+      expect(emitterB.getEventCount(PPE_EVENTS.EAN_CHECKED)).toBe(2);
+
+      // Test 2c: runActor mit direktem Objekt { eans: [...] }
+      const emitterC = new PpeEventEmitter();
+      const resultC = await runActor(
+        { eans: ['5054298241091', '4099979071513'] },
+        { storage, emitter: emitterC }
+      );
+      expect(resultC.items.length).toBeGreaterThanOrEqual(2);
+      expect(emitterC.getEventCount(PPE_EVENTS.EAN_CHECKED)).toBe(2);
+    });
+
+    it('Kriterium 3: Ungültige EANs werden im Ergebnis als invalid_eans ausgewiesen (batch)', async () => {
+      const emitter = new PpeEventEmitter();
+      const result = await runActor(
+        {
+          eans: [
+            '5054298241091',       // Gueltig mit Treffer
+            'invalid-barcode-xyz', // Ungueltiges Format
+            '5054298241090',       // Falsche Pruefziffer (ungueltig)
+            '4000000000006',       // Gueltig, aber 0 Treffer im Storage
+          ],
+        },
+        { storage, emitter }
+      );
+
+      expect(result.invalid_eans).toBeDefined();
+      expect(result.invalid_eans).toContain('invalid-barcode-xyz');
+      expect(result.invalid_eans).toContain('5054298241090');
+      expect(result.invalid_eans).not.toContain('5054298241091');
+      expect(result.invalid_eans).not.toContain('4000000000006');
+      expect(result.invalid_eans.length).toBe(2);
+
+      // Gueltige EANs werden trotzdem regulär zurueckgegeben
+      expect(result.items.some((i) => i.ean_barcodes.includes('5054298241091'))).toBe(true);
+    });
+
+    it('Kriterium 4: EAN-Checked Events werden pro geprüfter EAN korrekt gezählt (batch)', async () => {
+      const emitter = new PpeEventEmitter();
+      const result = await runActor(
+        {
+          eans: [
+            '5054298241091',       // EAN 1: gueltig, Treffer
+            '4099979071513',       // EAN 2: gueltig, Treffer
+            '4000000000006',       // EAN 3: gueltig, kein Treffer
+            'invalid-barcode-999', // EAN 4: ungueltig
+          ],
+        },
+        { storage, emitter }
+      );
+
+      // Exakt 4 EAN-Checked Events muessen ausgeloest worden sein
+      expect(emitter.getEventCount(PPE_EVENTS.EAN_CHECKED)).toBe(4);
+      expect(result.eventSummary[PPE_EVENTS.EAN_CHECKED]).toBe(4);
+
+      // Pay-Per-Event Kosten fuer 4 x ean-checked: 4 * 0.005 USD = 0.020 USD
+      const eanCheckedCost = 4 * PPE_EVENT_PRICES[PPE_EVENTS.EAN_CHECKED];
+      expect(result.totalCostUsd).toBeGreaterThanOrEqual(eanCheckedCost);
+    });
+  });
 });
