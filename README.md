@@ -31,7 +31,7 @@ Mit Inkrafttreten der europäischen Verordnung über die allgemeine Produktsiche
 - **Automatisiertes Ingestion-System:** Parst, bereinigt und normalisiert offizielle Safety-Gate-Meldungen (RAPEX).
 - **Strikte GTIN/EAN-Validierung:** Prüft EAN-8, EAN-13, UPC-A und UPC-E mittels Modulo-10-Algorithmus.
 - **Hybride Storage-Architektur:** Schnelle In-Memory-Verarbeitung oder persistente Speicherung via `node:sqlite`.
-- **Model Context Protocol (MCP):** 4 spezialisierte Agenten-Tools mit integriertem Prompt-Injection-Schutz und HTTP 402 Vorbereitung (Stripe Machine Payments Protocol).
+- **Model Context Protocol (MCP):** 5 spezialisierte Agenten-Tools mit integriertem Prompt-Injection-Schutz und HTTP 402 Vorbereitung (Stripe Machine Payments Protocol).
 - **Apify Actor Integration:** Cloud-native Bereitstellung mit granularem Pay-Per-Event (PPE) Abrechnungsmodell.
 
 ---
@@ -67,7 +67,7 @@ Mit Inkrafttreten der europäischen Verordnung über die allgemeine Produktsiche
          │      apps/actor       │          │   │          │       apps/mcp        │
          │  • Apify Actor CLI    │          │   │          │  • Stdio MCP Protocol │
          │  • Input/Dataset Zod  │          │   │          │  • Prompt-Sanitizer   │
-         │  • Pay-Per-Event (PPE)│          │   │          │  • 4 Specialized Tools│
+         │  • Pay-Per-Event (PPE)│          │   │          │  • 5 Specialized Tools│
          │    Accounting Engine  │          │   │          │  • HTTP 402 Gate (MPP)│
          └───────────────────────┘          │   │          └───────────────────────┘
                      │                      │   │                      │

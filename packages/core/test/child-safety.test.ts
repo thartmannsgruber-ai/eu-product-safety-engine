@@ -96,4 +96,124 @@ describe('Child Safety Classification', () => {
     expect(memChokingAlerts.length).toBeGreaterThan(0);
     expect(sqliteChokingAlerts.length).toBe(memChokingAlerts.length);
   });
+
+  describe('Herznieren Audit Verification (S1-S8 Scenarios)', () => {
+    it('S1: correctly identifies French baby product "Biberon pour bébé"', () => {
+      const alert: AlertRecord = {
+        alert_number: 'FR/TEST/001',
+        publication_date: '2026-11-18',
+        category: 'Childcare articles',
+        product: 'Biberon pour bébé en verre',
+        brand: 'BébéConfort',
+        model: 'Classic 250ml',
+      };
+      const res = classifyChildProduct(alert);
+      expect(res.isChildRelated).toBe(true);
+      expect(res.ageGroup).toBe('baby');
+    });
+
+    it('S2: detects French choking hazard "risque d\'étouffement" without risk_type fallback', () => {
+      const alert: AlertRecord = {
+        alert_number: 'FR/TEST/002',
+        publication_date: '2026-11-18',
+        category: 'Toys',
+        product: 'Jouet musical',
+        danger_description: 'Présence de petites pièces présentant un risque d\'étouffement pour les jeunes enfants.',
+      };
+      const res = classifyChildProduct(alert);
+      expect(res.isChildRelated).toBe(true);
+      expect(res.hazards).toContain('choking');
+    });
+
+    it('S3: identifies French "poupée" even if category does not mention jouet', () => {
+      const alert: AlertRecord = {
+        alert_number: 'FR/TEST/003',
+        publication_date: '2026-11-18',
+        category: 'Decorative items',
+        product: 'Poupée traditionnelle en tissu',
+      };
+      const res = classifyChildProduct(alert);
+      expect(res.isChildRelated).toBe(true);
+      expect(res.ageGroup).toBe('child');
+    });
+
+    it('S4: detects German compounds "Erstickungsgefahr" and "verschluckbare Kleinteile"', () => {
+      const alert: AlertRecord = {
+        alert_number: 'DE/TEST/004',
+        publication_date: '2026-11-18',
+        category: 'Sonstiges',
+        product: 'Kinder-Holzspielzeug',
+        danger_description: 'Es besteht akute Erstickungsgefahr durch leicht verschluckbare Kleinteile.',
+      };
+      const res = classifyChildProduct(alert);
+      expect(res.isChildRelated).toBe(true);
+      expect(res.hazards).toContain('choking');
+    });
+
+    it('S5 & S6: prevents false-positive chemical hazard on "could lead to" and "within reach of children"', () => {
+      const alert: AlertRecord = {
+        alert_number: 'EN/TEST/005',
+        publication_date: '2026-11-18',
+        category: 'Furniture',
+        product: 'Folding chair',
+        danger_description: 'The mechanism could lead to injuries if left within reach of children.',
+        risk_type: 'Injuries',
+      };
+      const res = classifyChildProduct(alert);
+      expect(res.hazards).not.toContain('chemical');
+    });
+
+    it('S7: detects plural "phthalates" and chemical compounds', () => {
+      const alert: AlertRecord = {
+        alert_number: 'EN/TEST/007',
+        publication_date: '2026-11-18',
+        category: 'Toys',
+        product: 'Plastic bath duck',
+        danger_description: 'Plastic material contains phthalates above the permissible limit.',
+      };
+      const res = classifyChildProduct(alert);
+      expect(res.hazards).toContain('chemical');
+    });
+
+    it('S8: correctly flags genuine chemical markers (lead paint, Pb, REACH, bleihaltig) and avoids "bleibt"', () => {
+      const genuineAlert: AlertRecord = {
+        alert_number: 'EN/TEST/008A',
+        publication_date: '2026-11-18',
+        category: 'Toys',
+        product: 'Toy car',
+        danger_description: 'Coated with lead paint, excessive Pb content violating REACH regulation.',
+      };
+      expect(classifyChildProduct(genuineAlert).hazards).toContain('chemical');
+
+      const bleiAlert: AlertRecord = {
+        alert_number: 'DE/TEST/008B',
+        publication_date: '2026-11-18',
+        category: 'Toys',
+        product: 'Lötbausatz für Kinder',
+        danger_description: 'Enthält bleihaltiges Lötzinn.',
+      };
+      expect(classifyChildProduct(bleiAlert).hazards).toContain('chemical');
+
+      const negativeBleiAlert: AlertRecord = {
+        alert_number: 'DE/TEST/008C',
+        publication_date: '2026-11-18',
+        category: 'Toys',
+        product: 'Holzklotz',
+        danger_description: 'Das Produkt bleibt stabil unter Belastung.',
+      };
+      expect(classifyChildProduct(negativeBleiAlert).hazards).not.toContain('chemical');
+    });
+
+    it('S9: handles German umlauts in compounds like "Plüschspielzeug"', () => {
+      const alert: AlertRecord = {
+        alert_number: 'DE/TEST/009',
+        publication_date: '2026-11-18',
+        category: 'Sonstiges',
+        product: 'Plüschspielzeug Bär',
+      };
+      const res = classifyChildProduct(alert);
+      expect(res.isChildRelated).toBe(true);
+      expect(res.ageGroup).toBe('child');
+    });
+  });
 });

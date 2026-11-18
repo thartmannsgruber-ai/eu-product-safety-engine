@@ -10,14 +10,18 @@ export interface ChildSafetyClassification {
   matchReasons: string[];
 }
 
-// Multilingual keywords for children, babies, and toys
-const BABY_KEYWORDS = /\b(baby|babies|bébé|bebe|säugling|infant|infants|strampler|schnuller|pacifier|teether|teething|crib|pram|stroller|kinderwagen|nappy|diaper|windel|0-12\s*m|6-12\s*m)\b/i;
-const TODDLER_KEYWORDS = /\b(toddler|toddlers|kleinkind|kleinkinder|1-3\s*y|1-3\s*j)\b/i;
-const GENERAL_CHILD_KEYWORDS = /\b(child|children|children['’´]s|enfant|enfants|kind|kinder|kindern|kid|kids|doll|dolls|poupée|puppe|puppen|plush|plüsch|kuscheltier|peluche|spielzeug|jouet|costume|verkleidung|playground)\b/i;
+// Multilingual keywords for children, babies, and toys using Unicode letter lookarounds
+const kw = (body: string, flags = 'iu') =>
+  new RegExp(`(?<![\\p{L}\\p{N}])(?:${body})(?![\\p{L}\\p{N}])`, flags);
 
-const CHOKING_KEYWORDS = /\b(choking|suffocation|asphyxiation|erstickung|verschluck|étouffement|small parts|kleinteile|petits éléments|cord|drawstring|strangulation)\b/i;
-const CHEMICAL_KEYWORDS = /\b(chemical|pfca|pfoa|pfas|phthalat|phthalate|dehp|lead|blei|cadmium|nickel|boron|toxic|reach|chemisch|substance|carcinogenic|toxic to reproduction)\b/i;
-const MAGNET_KEYWORDS = /\b(magnet|magnets|magnetisch|aimant|aimants|flux index|magnetic)\b/i;
+const BABY_KEYWORDS = kw('bab(?:y|ies)|bébés?|bebes?|biberons?|säugling\\p{L}*|infants?|strampler|schnuller|pacifiers?|teether|teething|cribs?|prams?|strollers?|kinderwagen|nappy|nappies|diapers?|windel\\p{L}*|0-12\\s*m|6-12\\s*m');
+const TODDLER_KEYWORDS = kw('toddlers?|kleinkind(?:er)?|1-3\\s*[yj]');
+const GENERAL_CHILD_KEYWORDS = kw("child|children|children['’´]s|enfants?|kind|kinder|kindern|kids?|dolls?|poupées?|puppen?|plush|plüsch\\p{L}*|kuscheltier\\p{L}*|peluches?|\\p{L}*spielzeug\\p{L}*|jouets?|costumes?|verkleidung|playground");
+
+const CHOKING_KEYWORDS = kw('choking|suffocation|asphyxiation|erstick\\p{L}*|verschluck\\p{L}*|étouffement|small parts?|kleinteil\\p{L}*|petits? éléments|cords?|drawstrings?|strangulation');
+const CHEMICAL_KEYWORDS = kw('chemicals?|chemisch\\p{L}*|pfca|pfoa|pfas|phthalat\\p{L}*|dehp|lead (?:paint|content|levels?|exposure|poisoning)|blei|bleihaltig\\p{L}*|bleigehalt|cadmium|nickel|boron|toxic|carcinogenic|toxic to reproduction|reach (?:regulation|compliance|annex|candidate)|svhc|substances? of very high concern');
+const CHEMICAL_CASE_SENSITIVE = kw('REACH|Pb', 'u');
+const MAGNET_KEYWORDS = kw('magnets?|magnetisch\\p{L}*|aimants?|flux index|magnetic');
 
 /**
  * Classify whether an alert represents a child- or baby-related product,
@@ -33,6 +37,9 @@ export function classifyChildProduct(alert: AlertRecord): ChildSafetyClassificat
 
   const primaryText = `${category} ${product} ${brand} ${model}`;
   const fullText = `${primaryText} ${danger} ${riskType}`;
+  const rawFull = [alert.category, alert.product, alert.brand, alert.model, alert.danger_description, alert.risk_type]
+    .filter(Boolean)
+    .join(' ');
 
   const matchReasons: string[] = [];
   let isChildRelated = false;
@@ -69,7 +76,11 @@ export function classifyChildProduct(alert: AlertRecord): ChildSafetyClassificat
   if (CHOKING_KEYWORDS.test(fullText) || riskType.includes('choking') || riskType.includes('strangulation')) {
     hazards.push('choking');
   }
-  if (CHEMICAL_KEYWORDS.test(fullText) || riskType.includes('chemical')) {
+  if (
+    CHEMICAL_KEYWORDS.test(fullText) ||
+    CHEMICAL_CASE_SENSITIVE.test(rawFull) ||
+    riskType.includes('chemical')
+  ) {
     hazards.push('chemical');
   }
   if (MAGNET_KEYWORDS.test(fullText)) {
