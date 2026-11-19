@@ -19,6 +19,8 @@ import {
   EmptyDatabaseError,
   parseYearWeekFromAlert,
   classifyChildProduct,
+  resolveIdentifier,
+  type ResolvedIdentifier,
 } from '@productsafetyengine/core';
 import { sanitizeInput } from './sanitizer.js';
 
@@ -608,6 +610,237 @@ export async function executeScreenChildrenProducts(
 }
 
 // ============================================================================
+// Schemas und Handler fuer F11: check_amazon_product & check_product_batch
+// ============================================================================
+
+export const CheckAmazonProductSchema = {
+  input: z
+    .string()
+    .min(1, 'Input ASIN or Amazon URL must not be empty')
+    .describe(
+      'Amazon ASIN (B0... or 10-digit ISBN-10) or full Amazon product URL (amazon.de, amazon.com, amzn.to etc.) for Amazon FBA and GPSR recall checking'
+    ),
+};
+
+export const CheckProductBatchSchema = {
+  identifiers: z
+    .array(z.string())
+    .max(500, 'Batch size must not exceed 500 identifiers')
+    .describe(
+      'List of product identifiers (EAN, GTIN, ISBN-10, ASIN, Amazon URLs) up to 500 items for bulk screening, Amazon FBA audits and GPSR recall checking'
+    ),
+  childProductsOnly: z
+    .boolean()
+    .optional()
+    .describe(
+      'Optional filter to only match safety alerts for toys, childcare articles, and baby products (GPSR / Child Safety)'
+    ),
+};
+
+export async function executeCheckAmazonProduct(
+  args: { input?: string },
+  storage: IAlertStorage
+) {
+  await ensureDatabaseReady(storage);
+  const rawInput = (args?.input ?? '').trim();
+  const sanitized = rawInput ? sanitizeInput(rawInput, { maxLength: 2048 }) : '';
+
+  if (!sanitized) {
+    return {
+      isError: true,
+      content: [
+        {
+          type: 'text' as const,
+          text: JSON.stringify({
+            error: 'Input ASIN or Amazon URL must not be empty.',
+            disclaimer: NO_HIT_SAFETY_DISCLAIMER,
+          }),
+        },
+      ],
+    };
+  }
+
+  const resolved = await resolveIdentifier(sanitized);
+  let alerts: AlertRecord[] = [];
+  let note: string | undefined = undefined;
+
+  if (resolved.ean) {
+    alerts = await storage.getByEan(resolved.ean);
+    if (alerts.length === 0) {
+      note = NO_HIT_SAFETY_DISCLAIMER;
+    }
+  } else if (resolved.keywords && resolved.keywords.length > 0) {
+    const query = resolved.keywords.join(' ');
+    alerts = await storage.findAlerts({ query });
+    if (alerts.length === 0) {
+      note = `Suche nach Produkt-Schlagwörtern '${query}' aus der Amazon-URL lieferte keine Treffer. ${NO_HIT_SAFETY_DISCLAIMER}`;
+    } else {
+      note = `Treffer basierend auf Schlagwörtern '${query}' aus der Amazon-URL ermittelt.`;
+    }
+  } else if (resolved.needsRedirect) {
+    note = 'Amazon-Kurzlinks (z. B. amzn.to, a.co) erfordern eine Weiterleitung (Redirect), die ohne Netzwerkzugriff nicht aufgelöst werden kann. Bitte die vollständige Amazon-Produkt-URL angeben.';
+  } else {
+    note = resolved.error ?? `Kennung '${sanitized}' konnte nicht aufgelöst werden. Für Amazon FBA / GPSR Prüfungen bitte vollständige Amazon-Produkt-URL mit Titel im Pfad oder eine EAN/ISBN angeben.`;
+  }
+
+  return {
+    content: [
+      {
+        type: 'text' as const,
+        text: JSON.stringify(
+          {
+            input: sanitized,
+            resolved: Boolean(resolved.ean || (resolved.keywords && resolved.keywords.length > 0)),
+            resolution: resolved,
+            match_count: alerts.length,
+            alerts,
+            matches: alerts,
+            note: note ?? (alerts.length === 0 ? NO_HIT_SAFETY_DISCLAIMER : undefined),
+            hint: note ?? (alerts.length === 0 ? NO_HIT_SAFETY_DISCLAIMER : undefined),
+            disclaimer: NO_HIT_SAFETY_DISCLAIMER,
+          },
+          null,
+          2
+        ),
+      },
+    ],
+  };
+}
+
+export async function executeCheckProductBatch(
+  args: { identifiers: string[]; childProductsOnly?: boolean },
+  storage: IAlertStorage
+) {
+  await ensureDatabaseReady(storage);
+
+  if (!args?.identifiers || !Array.isArray(args.identifiers)) {
+    return {
+      isError: true,
+      content: [
+        {
+          type: 'text' as const,
+          text: JSON.stringify({
+            error: 'identifiers must be an array of strings.',
+          }),
+        },
+      ],
+    };
+  }
+
+  if (args.identifiers.length > 500) {
+    return {
+      isError: true,
+      content: [
+        {
+          type: 'text' as const,
+          text: JSON.stringify({
+            error: `Batch size must not exceed 500 identifiers (received ${args.identifiers.length}). Maximum allowed is 500.`,
+          }),
+        },
+      ],
+    };
+  }
+
+  const results: Array<{
+    input: string;
+    kind: string;
+    resolution_method: string | null;
+    match_count: number;
+    top_alerts: AlertRecord[];
+    ean?: string;
+    keywords?: string[];
+    error?: string;
+    needsRedirect?: boolean;
+  }> = [];
+
+  let resolvedCount = 0;
+  let unresolvedCount = 0;
+  let matchedIdentifiersCount = 0;
+  let totalMatches = 0;
+
+  for (const raw of args.identifiers) {
+    const rawStr = typeof raw === 'string' ? raw : String(raw ?? '');
+    const sanitized = sanitizeInput(rawStr.trim(), { maxLength: 2048 });
+    const resolved = await resolveIdentifier(sanitized);
+
+    let matches: AlertRecord[] = [];
+
+    if (resolved.ean) {
+      matches = await storage.getByEan(resolved.ean);
+      if (args.childProductsOnly) {
+        matches = matches.filter((a) => classifyChildProduct(a).isChildRelated);
+      }
+    } else if (resolved.keywords && resolved.keywords.length > 0) {
+      const query = resolved.keywords.join(' ');
+      matches = await storage.findAlerts({
+        query,
+        childProductsOnly: args.childProductsOnly,
+      });
+    }
+
+    const matchCount = matches.length;
+    const isResolved = Boolean(resolved.resolution_method);
+
+    if (isResolved) {
+      resolvedCount++;
+    } else {
+      unresolvedCount++;
+    }
+
+    if (matchCount > 0) {
+      matchedIdentifiersCount++;
+    }
+    totalMatches += matchCount;
+
+    results.push({
+      input: raw,
+      kind: resolved.kind,
+      resolution_method: resolved.resolution_method ?? null,
+      match_count: matchCount,
+      top_alerts: matches.slice(0, 3),
+      ean: resolved.ean,
+      keywords: resolved.keywords,
+      error: resolved.error,
+      needsRedirect: resolved.needsRedirect,
+    });
+  }
+
+  const total = args.identifiers.length;
+
+  return {
+    content: [
+      {
+        type: 'text' as const,
+        text: JSON.stringify(
+          {
+            total,
+            total_identifiers: total,
+            resolved_count: resolvedCount,
+            unresolved_count: unresolvedCount,
+            matched_count: matchedIdentifiersCount,
+            matched_identifiers: matchedIdentifiersCount,
+            total_matches: totalMatches,
+            childProductsOnly: Boolean(args.childProductsOnly),
+            summary: {
+              total,
+              resolved: resolvedCount,
+              unresolved: unresolvedCount,
+              matched: matchedIdentifiersCount,
+              total_matches: totalMatches,
+            },
+            results,
+            items: results,
+            disclaimer: NO_HIT_SAFETY_DISCLAIMER,
+          },
+          null,
+          2
+        ),
+      },
+    ],
+  };
+}
+
+// ============================================================================
 // MCP-Tool-Registrierung
 // ============================================================================
 
@@ -676,6 +909,26 @@ export function registerTools(
     ScreenChildrenProductsSchema,
     async (args) => {
       return executeScreenChildrenProducts(args, holder.storage);
+    }
+  );
+
+  // 6. Tool: check_amazon_product
+  server.tool(
+    'check_amazon_product',
+    'Checks an Amazon product by ASIN (B0... or ISBN-10) or Amazon product URL against EU Safety Gate / RAPEX Recall alerts for Amazon FBA and GPSR compliance. Resolves identifiers, searches Recall database, and returns match results with safety notes for unresolvable IDs or shortlinks.',
+    CheckAmazonProductSchema,
+    async (args) => {
+      return executeCheckAmazonProduct(args, holder.storage);
+    }
+  );
+
+  // 7. Tool: check_product_batch
+  server.tool(
+    'check_product_batch',
+    'Performs Bulk screening of up to 500 product identifiers (EAN, GTIN, ISBN-10, ASIN, Amazon URLs) against EU Safety Gate / RAPEX Recall alerts for Amazon FBA sellers, GPSR compliance, and Bulk inventory safety audits. Returns match counts and top alerts per identifier and overall summary statistics.',
+    CheckProductBatchSchema,
+    async (args) => {
+      return executeCheckProductBatch(args, holder.storage);
     }
   );
 }
