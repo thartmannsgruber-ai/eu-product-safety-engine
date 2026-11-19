@@ -496,19 +496,31 @@ describe('F07: Apify Actor Struktur & Konfiguration', () => {
       storage.insertAlerts(normalized);
     });
 
-    describe('Akzeptanzkriterium 1: smithery.yaml im Root mit korrekter Startkonfiguration (npx eu-product-safety-mcp)', () => {
+    describe('Akzeptanzkriterium 1: smithery.yaml im Root mit korrekter Startkonfiguration (npx eu-product-safety-mcp oder node apps/mcp/dist/index.js)', () => {
       const smitheryYamlPath = path.resolve(REPO_ROOT, 'smithery.yaml');
+      const mcpPkgPath = path.resolve(REPO_ROOT, 'apps/mcp/package.json');
 
       it('smithery.yaml existiert im Root-Verzeichnis', () => {
         expect(fs.existsSync(smitheryYamlPath)).toBe(true);
       });
 
-      it('enthält valide Startkonfiguration mit startCommand, type: stdio und npx eu-product-safety-mcp', () => {
+      it('enthält valide Startkonfiguration mit startCommand, type: stdio und akzeptiert node oder npx', () => {
         const content = fs.readFileSync(smitheryYamlPath, 'utf-8');
         expect(content).toContain('startCommand');
         expect(content).toMatch(/type:\s*['"]?stdio['"]?/);
-        expect(content).toMatch(/command:\s*['"]?npx['"]?/);
-        expect(content).toContain('eu-product-safety-mcp');
+
+        const isNpxConfig =
+          /command:\s*['"]?npx['"]?/.test(content) && content.includes('eu-product-safety-mcp');
+        const isNodeConfig =
+          /command:\s*['"]?node['"]?/.test(content) && content.includes('apps/mcp/dist/index.js');
+
+        expect(isNpxConfig || isNodeConfig).toBe(true);
+
+        // Prüfen, dass der referenzierte Bin-Eintrag in apps/mcp/package.json existiert
+        expect(fs.existsSync(mcpPkgPath)).toBe(true);
+        const mcpPkg = JSON.parse(fs.readFileSync(mcpPkgPath, 'utf-8'));
+        expect(mcpPkg.bin).toBeDefined();
+        expect(mcpPkg.bin['eu-product-safety-mcp']).toBeDefined();
       });
     });
 
