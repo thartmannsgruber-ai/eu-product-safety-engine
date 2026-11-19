@@ -161,6 +161,9 @@ class InboundMailCrawler:
         storage: Optional[CRMStorage] = None,
         blacklist_mgr: Optional[BlacklistManager] = None,
         state_file: Optional[Union[str, Path]] = None,
+        engine: Optional[Any] = None,
+        drafter: Optional[Any] = None,
+        auto_draft: bool = False,
         imap_host: Optional[str] = None,
         imap_port: int = 993,
         imap_user: Optional[str] = None,
@@ -169,6 +172,9 @@ class InboundMailCrawler:
         base_dir = Path(__file__).resolve().parent.parent.parent
         self.storage = storage or get_default_storage()
         self.blacklist_mgr = blacklist_mgr or getattr(self.storage, "blacklist_mgr", get_default_manager())
+        self.engine = engine
+        self.drafter = drafter
+        self.auto_draft = auto_draft or (engine is not None and drafter is not None)
 
         if state_file:
             self.state_file = Path(state_file)
@@ -471,6 +477,29 @@ class InboundMailCrawler:
 
         # 5. E-Mail-Event in Kontakthistorie des Leads festhalten
         active_lead = self.storage.get_lead(target_email)
+        generated_draft = None
+        draft_id = None
+
+        # Falls auto_draft aktiv: Safety Gate Engine & Response Drafter anstossen
+        if self.auto_draft and self.engine and self.drafter and classification.intent == Intent.POSITIVE_TEST_REQUEST:
+            try:
+                audit_report = self.engine.run_audit(text=parsed["body"])
+                lead_data = active_lead or {"email": target_email}
+                lead_lang = lead_data.get("language") if isinstance(lead_data, dict) else None
+                generated_draft = self.drafter.draft_and_enqueue(
+                    lead=lead_data,
+                    inbound_message=parsed,
+                    report_data=audit_report,
+                    language=lead_lang,
+                    intent=classification.intent,
+                )
+                if isinstance(generated_draft, dict):
+                    draft_id = generated_draft.get("draft_id")
+                elif hasattr(generated_draft, "draft_id"):
+                    draft_id = getattr(generated_draft, "draft_id")
+            except Exception:
+                pass
+
         if active_lead:
             inbound_event = {
                 "action": "INBOUND_REPLY",
@@ -484,6 +513,8 @@ class InboundMailCrawler:
                 "eans_detected": classification.eans_detected,
                 "snippet": snippet,
             }
+            if draft_id:
+                inbound_event["draft_id"] = draft_id
             active_lead.setdefault("history", []).append(inbound_event)
             active_lead["updated_at"] = now_iso
             self.storage.save()
@@ -499,7 +530,7 @@ class InboundMailCrawler:
             }
         )
 
-        return {
+        res_dict = {
             "status": "PROCESSED",
             "message_id": msg_id,
             "lead_email": target_email,
@@ -509,6 +540,10 @@ class InboundMailCrawler:
             "classification": classification,
             "skipped": False,
         }
+        if generated_draft:
+            res_dict["draft"] = generated_draft
+            res_dict["draft_id"] = draft_id
+        return res_dict
 
     # -----------------------------------------------------------------------
     # Crawl Execution (Mock & Live IMAP)

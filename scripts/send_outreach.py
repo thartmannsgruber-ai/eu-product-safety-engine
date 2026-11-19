@@ -20,9 +20,22 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if str(BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR))
+
 CAMPAIGN_FILE = os.path.join(BASE_DIR, '.market', 'leads', 'outreach_campaign.json')
 SENT_LOG_FILE = os.path.join(BASE_DIR, '.market', 'leads', 'sent_log.json')
 ENV_FILE = os.path.join(BASE_DIR, '.env')
+
+try:
+    from scripts.crm.blacklist import is_blacklisted, can_contact, BlacklistedRecipientError
+except ImportError:
+    def is_blacklisted(email: str) -> bool:
+        return False
+    def can_contact(email: str) -> bool:
+        return True
+    class BlacklistedRecipientError(Exception):
+        pass
 
 # Paths
 THFC_ENV_FILE = "/mnt/devstorage/projects/THFC/SmartBetaFaktorEngine/.env.local"
@@ -139,6 +152,9 @@ def main():
             allowed_countries = [c.strip().lower() for c in args.country.split(',')]
             if lead.get('country', '').lower() not in allowed_countries:
                 continue
+        if is_blacklisted(lead['email']):
+            print(f"[SECURITY BLOCKED] Lead '{lead['email']}' is on the permanent blacklist (skipped).")
+            continue
         if lead['email'] in sent_log and not args.test_recipient:
             continue
         queue.append(lead)
@@ -157,6 +173,9 @@ def main():
     print("=========================================\n")
     
     if args.test_recipient:
+        if is_blacklisted(args.test_recipient):
+            print(f"[SECURITY BLOCKED] Test recipient '{args.test_recipient}' is on the permanent blacklist! Aborted.")
+            sys.exit(1)
         test_lead = queue[0] if queue else campaign[0]
         test_subj = f"[TEST PREVIEW] {test_lead['subject']}"
         print(f"Sending test preview for lead '{test_lead['company']}' to {args.test_recipient}...")
