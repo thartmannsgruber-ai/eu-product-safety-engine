@@ -128,15 +128,19 @@ def generate_draft(lead, title, desc):
         subject = f"Safety-Gate-Abgleich für {company}?"
         body = f"""Sehr geehrte Damen und Herren,
 
-ich bin Thomas Hartmannsgruber von THFC Consulting und entwickle zielgerichtete Software-Engines für Unternehmen. Hintergrundinformationen zu mir und unseren entwickelten Engines können Sie direkt auf meiner Labs-Seite einsehen:
+ich bin Thomas Hartmannsgruber von THFC Consulting und entwickle zielgerichtete Software-Engines für Unternehmen. Hintergrundinformationen zu mir und unseren entwickelten Engines können Sie direkt auf meiner Homepage einsehen:
 https://thfc-consulting.de/labs/product-safety
 
-Für Ihren Produkt-Kontext habe ich ein interessantes Werkzeug gebaut, das EANs und Produktnamen automatisch gegen das EU Safety Gate abgleicht, denn wie Sie vielleicht wissen, gilt seit Dezember 2024 die neue EU-Produktsicherheitsverordnung (GPSR). Da das EU Safety Gate jede Woche neue Meldungen veröffentlicht und Spielzeug dort regelmäßig zu den häufigsten Kategorien gehört, ist es aus Compliance-Gesichtspunkten essenziell, auf dem aktuellen Stand zu bleiben.
+Für das Produktspektrum Ihres Unternehmens habe ich ein ggf. interessantes Werkzeug entwickelt, das EANs und Produktnamen automatisch gegen das EU Safety Gate abgleicht, denn wie Sie vielleicht wissen, gilt seit Dezember 2024 die neue EU-Produktsicherheitsverordnung (GPSR).
 
-Um die Engine kennenzulernen, würde ich Ihnen anbieten, 50 Artikel aus Ihrem Sortiment unverbindlich und zunächst kostenlos zu prüfen. Eine kurze Antwort genügt.
+Da das EU Safety Gate jede Woche neue Meldungen veröffentlicht und Spielzeug dort regelmäßig zu den häufigsten Kategorien gehört, ist es aus Compliance-Gesichtspunkten essenziell, auf dem aktuellen Stand zu bleiben.
 
-Wenn Sie mit dem Ergebnis zufrieden sind, würde ich Sie auf meine entwickelte Engine via der international renommierten SaaS-Plattform Apify verweisen:
+Um die Engine kennenzulernen, würde ich Ihnen anbieten, 50 Artikel aus Ihrem Sortiment unverbindlich und zunächst kostenfrei durch die Engine prüfen zu lassen. Eine kurze Antwort genügt.
+
+Wenn Sie mit dem Ergebnis zufrieden sind, verweise ich Sie gerne auf meine entwickelte Engine „Product-Safety“, auf die Sie rechtssicher und ideal an Ihre IT-Systeme angebunden über die international renommierte SaaS-Plattform Apify zugreifen können:
 {actor_url}
+
+Sollten Sie dort noch keinen Account besitzen: Sie können sich kostenlos registrieren und erhalten 5 $ Startguthaben (damit können Sie z. B. 1.000 Produkte prüfen lassen oder 100 Artikel über 10 Wochen lang wöchentlich überwachen).
 
 Viele Grüße
 Thomas Hartmannsgruber
@@ -149,15 +153,19 @@ Kein Interesse? Antworten Sie einfach kurz mit „Nein“ – dann melde ich mic
         subject = f"Vérification Safety Gate pour {company} ?"
         body = f"""Madame, Monsieur,
 
-Je suis Thomas Hartmannsgruber de THFC Consulting et je développe des moteurs logiciels dédiés aux entreprises. Vous trouverez des informations détaillées sur mon parcours et sur nos moteurs technologiques directement sur notre page Labs :
+Je suis Thomas Hartmannsgruber de THFC Consulting et je développe des moteurs logiciels dédiés aux entreprises. Vous trouverez des informations détaillées sur mon parcours et sur nos moteurs directement sur mon site web :
 https://thfc-consulting.de/labs/product-safety-en
 
-Pour votre catalogue de produits, j'ai conçu un outil qui vérifie automatiquement les codes EAN et noms de produits par rapport à la base officielle EU Safety Gate. Comme vous le savez sans doute, le règlement européen sur la sécurité générale des produits (GPSR) est en vigueur depuis décembre 2024. Le système EU Safety Gate publiant de nouvelles alertes chaque semaine et les jouets figurant régulièrement parmi les catégories les plus signalées, il est essentiel pour votre conformité de rester à jour.
+Pour la gamme de produits de votre entreprise, j'ai développé un outil potentiellement intéressant qui vérifie automatiquement les codes EAN et noms de produits par rapport à la base officielle EU Safety Gate, car comme vous le savez peut-être, le règlement européen sur la sécurité générale des produits (GPSR) est en vigueur depuis décembre 2024.
 
-Afin de découvrir cet outil, je vous propose de vérifier 50 articles de votre catalogue de manière sans engagement et gratuite. Une simple réponse à cet e-mail suffit.
+Le système EU Safety Gate publiant de nouvelles alertes chaque semaine et les jouets figurant régulièrement parmi les catégories les plus signalées, il est essentiel pour votre conformité de rester à jour.
 
-Si le résultat vous convient, vous pourrez ensuite utiliser ce moteur en toute autonomie via la plateforme SaaS reconnue Apify :
+Afin de découvrir cet outil, je vous propose de faire vérifier 50 articles de votre catalogue de manière sans engagement et d'abord gratuite par notre moteur. Une simple réponse suffit.
+
+Si le résultat vous convient, je vous orienterai volontiers vers mon moteur « Product-Safety », auquel vous pouvez accéder en toute sécurité juridique et parfaitement intégré à vos systèmes informatiques via la plateforme SaaS reconnue Apify :
 {actor_url}
+
+Si vous ne possédez pas encore de compte Apify : l'inscription est gratuite et vous bénéficiez de 5 $ de crédit de bienvenue (ce qui vous permet par exemple de vérifier 1 000 produits ou d'assurer le suivi hebdomadaire de 100 articles pendant 10 semaines).
 
 Cordialement,
 Thomas Hartmannsgruber
@@ -170,15 +178,19 @@ Pas intéressé ? Répondez simplement « Non » et je ne vous recontacterai pas
         subject = f"Safety Gate controle voor {company}?"
         body = f"""Geachte heer, mevrouw,
 
-Mijn naam is Thomas Hartmannsgruber van THFC Consulting en ik ontwikkel gerichte software-engines voor bedrijven. Achtergrondinformatie over mij en onze ontwikkelde engines vindt u direct op onze Labs-pagina:
+Mijn naam is Thomas Hartmannsgruber van THFC Consulting en ik ontwikkel gerichte software-engines voor bedrijven. Achtergrondinformatie over mij en onze ontwikkelde engines vindt u direct op mijn homepage:
 https://thfc-consulting.de/labs/product-safety-en
 
-Voor uw productassortiment heb ik een tool gebouwd die EAN-codes en productnamen automatisch controleert tegen de officiële EU Safety Gate database. Zoals u wellicht weet, geldt sinds december 2024 de nieuwe Europese Verordening Algemene Productveiligheid (GPSR). Aangezien het EU Safety Gate wekelijks nieuwe meldingen publiceert en speelgoed regelmatig tot de meest gemelde categorieën behoort, is het vanuit compliance-oogpunt essentieel om actueel te blijven.
+Voor het productassortiment van uw onderneming heb ik een wellicht interessante tool ontwikkeld die EAN-codes en productnamen automatisch controleert tegen de officiële EU Safety Gate database, want zoals u wellicht weet geldt sinds december 2024 de nieuwe Europese Verordening Algemene Productveiligheid (GPSR).
 
-Om vrijblijvend kennis te maken met de engine, bied ik u aan om eerst 50 artikelen uit uw assortiment kosteloos te controleren. Een kort antwoord op deze mail is voldoende.
+Aangezien het EU Safety Gate wekelijks nieuwe meldingen publiceert en speelgoed regelmatig tot de meest gemelde categorieën behoort, is het vanuit compliance-oogpunt essentieel om actueel te blijven.
 
-Indien u tevreden bent over het resultaat, kunt u de engine desgewenst flexibel inzetten via het internationaal gerenommeerde SaaS-platform Apify:
+Om vrijblijvend kennis te maken met de engine, bied ik u aan om eerst 50 artikelen uit uw assortiment kosteloos door de engine te laten controleren. Een kort antwoord is voldoende.
+
+Indien u tevreden bent over het resultaat, verwijs ik u graag naar mijn ontwikkelde engine "Product-Safety", waartoe u juridisch veilig en optimaal gekoppeld aan uw IT-systemen toegang heeft via het internationaal gerenommeerde SaaS-platform Apify:
 {actor_url}
+
+Mocht u daar nog geen account hebben: u kunt zich gratis registreren en ontvangt $ 5 starttegoed (waarmee u bijv. 1.000 producten kunt laten controleren of 100 artikelen gedurende 10 weken wekelijks kunt monitoren).
 
 Met vriendelijke groet,
 Thomas Hartmannsgruber
@@ -191,15 +203,19 @@ Geen interesse? Reageer kort met "Nee" en ik neem geen contact meer met u op.
         subject = f"Verifica Safety Gate per {company}?"
         body = f"""Gentili signori,
 
-sono Thomas Hartmannsgruber di THFC Consulting e sviluppo motori software mirati per le aziende. Potete consultare informazioni di approfondimento su di me e sui nostri motori tecnologici direttamente sulla nostra pagina Labs:
+sono Thomas Hartmannsgruber di THFC Consulting e sviluppo motori software mirati per le aziende. Potete consultare informazioni di approfondimento su di me e sui nostri motori direttamente sulla mia homepage:
 https://thfc-consulting.de/labs/product-safety-en
 
-Per il vostro catalogo prodotti ho realizzato uno strumento che confronta automaticamente codici EAN e denominazioni prodotto con il database ufficiale EU Safety Gate. Come forse saprete, da dicembre 2024 è in vigore il nuovo regolamento europeo sulla sicurezza generale dei prodotti (GPSR). Poiché l'EU Safety Gate pubblica nuove segnalazioni ogni settimana e i giocattoli rientrano regolarmente tra le categorie più interessate, è essenziale sotto il profilo della conformità rimanere sempre aggiornati.
+Per la gamma di prodotti della vostra azienda ho sviluppato uno strumento potenzialmente interessante che confronta automaticamente codici EAN e denominazioni prodotto con il database ufficiale EU Safety Gate, poiché come forse saprete da dicembre 2024 è in vigore il nuovo regolamento europeo sulla sicurezza generale dei prodotti (GPSR).
 
-Per farvi conoscere il funzionamento del motore, vi propongo di verificare 50 articoli del vostro assortimento senza alcun impegno e gratuitamente. È sufficiente una breve risposta a questa e-mail.
+Dato che l'EU Safety Gate pubblica nuove segnalazioni ogni settimana e i giocattoli rientrano regolarmente tra le categorie più interessate, è essenziale sotto il profilo della conformità rimanere sempre aggiornati.
 
-Se sarete soddisfatti del risultato, potrete in seguito utilizzare il motore in totale autonomia tramite la rinomata piattaforma SaaS internazionale Apify:
+Per farvi conoscere il motore, vi propongo di far verificare 50 articoli del vostro assortimento senza impegno e inizialmente a titolo gratuito tramite il motore stesso. È sufficiente una breve risposta.
+
+Se sarete soddisfatti del risultato, vi rinvio volentieri al motore "Product-Safety", a cui potete accedere in piena conformità giuridica e perfettamente integrato nei vostri sistemi IT tramite la rinomata piattaforma SaaS internazionale Apify:
 {actor_url}
+
+Se non disponete ancora di un account: potete registrarvi gratuitamente e ricevere 5 $ di credito iniziale (con cui potrete ad es. verificare 1.000 prodotti oppure monitorare settimanalmente 100 articoli per 10 settimane).
 
 Cordiali saluti,
 Thomas Hartmannsgruber
@@ -212,15 +228,19 @@ Non siete interessati? Rispondete semplicemente "No" e non vi ricontatterò più
         subject = f"Verificación Safety Gate para {company}?"
         body = f"""Estimados señores:
 
-Soy Thomas Hartmannsgruber, de THFC Consulting, y desarrollo motores de software orientados a empresas. Puede consultar información detallada sobre mi trayectoria y sobre nuestros motores tecnológicos directamente en nuestra página Labs:
+Soy Thomas Hartmannsgruber, de THFC Consulting, y desarrollo motores de software orientados a empresas. Puede consultar información detallada sobre mi trayectoria y sobre nuestros motores directamente en mi página web:
 https://thfc-consulting.de/labs/product-safety-en
 
-Para su catálogo de productos he diseñado una herramienta que coteja automáticamente códigos EAN y nombres de productos con el sistema oficial EU Safety Gate. Como sabrán, desde diciembre de 2024 se aplica el nuevo Reglamento General de Seguridad de los Productos de la UE (GPSR). Dado que el EU Safety Gate publica nuevas alertas cada semana y los juguetes se encuentran habitualmente entre las categorías con mayor número de avisos, resulta esencial desde el punto de vista del cumplimiento normativo mantenerse al día.
+Para la gama de productos de su empresa he desarrollado una herramienta de posible interés que coteja automáticamente códigos EAN y nombres de productos con el sistema oficial EU Safety Gate, ya que, como sabrán, desde diciembre de 2024 se aplica el nuevo Reglamento General de Seguridad de los Productos de la UE (GPSR).
 
-Para que conozcan la herramienta, les ofrezco revisar 50 artículos de su catálogo de forma gratuita y sin compromiso. Basta con responder brevemente a este correo.
+Dado que el EU Safety Gate publica nuevas alertas cada semana y los juguetes se encuentran habitualmente entre las categorías con mayor número de avisos, resulta esencial desde el punto de vista del cumplimiento normativo mantenerse al día.
 
-Si quedan satisfechos con el resultado, podrán utilizar el motor cuando lo deseen a través de la reconocida plataforma internacional SaaS Apify:
+Para conocer el funcionamiento del motor, les ofrezco revisar 50 artículos de su catálogo de forma gratuita y sin compromiso mediante el propio motor. Basta con una breve respuesta.
+
+Si quedan satisfechos con el resultado, les remitiré con gusto a mi motor «Product-Safety», al que pueden acceder con plena seguridad jurídica y perfectamente integrado en sus sistemas informáticos a través de la reconocida plataforma internacional SaaS Apify:
 {actor_url}
+
+Si aún no disponen de cuenta en dicha plataforma: pueden registrarse gratis y recibir 5 $ de saldo inicial (lo que les permite, por ejemplo, verificar 1.000 productos o supervisar semanalmente 100 artículos durante 10 semanas).
 
 Un cordial saludo,
 Thomas Hartmannsgruber
@@ -233,15 +253,19 @@ Großheppacherstraße 16/1 · 71364 Winnenden, Alemania
         subject = f"Safety Gate compliance check for {company}?"
         body = f"""Dear Sir or Madam,
 
-My name is Thomas Hartmannsgruber from THFC Consulting. I develop specialized software engines for businesses. You can find detailed background information about me and our technology engines directly on our Labs page:
+My name is Thomas Hartmannsgruber from THFC Consulting. I develop specialized software engines for businesses. You can find detailed background information about me and our engines directly on my homepage:
 https://thfc-consulting.de/labs/product-safety-en
 
-For your product context, I have built a tool that automatically cross-checks EAN barcodes and product titles against the official EU Safety Gate database. As you may know, the new EU General Product Safety Regulation (GPSR) has been in force since December 2024. Because the EU Safety Gate publishes new recall alerts every week, and toys consistently represent one of the most frequently flagged categories, staying continuously compliant is essential.
+For your company's product range, I have developed an engine that automatically cross-checks EAN barcodes and product titles against the official EU Safety Gate database. As you may know, the new EU General Product Safety Regulation (GPSR) has been in force since December 2024.
+
+Because the EU Safety Gate publishes new recall alerts every week, and toys consistently represent one of the most frequently flagged categories, staying continuously compliant is essential.
 
 To introduce you to the engine, I would be glad to check 50 items from your product range free of charge and without any obligation. A brief reply to this email is all it takes.
 
-If you are satisfied with the results, you can continue using the engine flexibly via the internationally renowned SaaS platform Apify:
+If you are satisfied with the results, you can access my "Product-Safety" engine with full legal certainty and seamless IT integration via the internationally renowned SaaS platform Apify:
 {actor_url}
+
+If you do not have an Apify account yet: registration is free and includes $5 in welcome credits (allowing you, for example, to screen 1,000 products or monitor 100 SKUs weekly over 10 weeks).
 
 Best regards,
 Thomas Hartmannsgruber

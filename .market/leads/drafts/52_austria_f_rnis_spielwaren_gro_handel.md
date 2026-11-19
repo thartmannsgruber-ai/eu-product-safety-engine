@@ -13,15 +13,19 @@
 ```text
 Sehr geehrte Damen und Herren,
 
-ich bin Thomas Hartmannsgruber von THFC Consulting und entwickle zielgerichtete Software-Engines für Unternehmen. Hintergrundinformationen zu mir und unseren entwickelten Engines können Sie direkt auf meiner Labs-Seite einsehen:
+ich bin Thomas Hartmannsgruber von THFC Consulting und entwickle zielgerichtete Software-Engines für Unternehmen. Hintergrundinformationen zu mir und unseren entwickelten Engines können Sie direkt auf meiner Homepage einsehen:
 https://thfc-consulting.de/labs/product-safety
 
-Für Ihren Produkt-Kontext habe ich ein interessantes Werkzeug gebaut, das EANs und Produktnamen automatisch gegen das EU Safety Gate abgleicht, denn wie Sie vielleicht wissen, gilt seit Dezember 2024 die neue EU-Produktsicherheitsverordnung (GPSR). Da das EU Safety Gate jede Woche neue Meldungen veröffentlicht und Spielzeug dort regelmäßig zu den häufigsten Kategorien gehört, ist es aus Compliance-Gesichtspunkten essenziell, auf dem aktuellen Stand zu bleiben.
+Für das Produktspektrum Ihres Unternehmens habe ich ein ggf. interessantes Werkzeug entwickelt, das EANs und Produktnamen automatisch gegen das EU Safety Gate abgleicht, denn wie Sie vielleicht wissen, gilt seit Dezember 2024 die neue EU-Produktsicherheitsverordnung (GPSR).
 
-Um die Engine kennenzulernen, würde ich Ihnen anbieten, 50 Artikel aus Ihrem Sortiment unverbindlich und zunächst kostenlos zu prüfen. Eine kurze Antwort genügt.
+Da das EU Safety Gate jede Woche neue Meldungen veröffentlicht und Spielzeug dort regelmäßig zu den häufigsten Kategorien gehört, ist es aus Compliance-Gesichtspunkten essenziell, auf dem aktuellen Stand zu bleiben.
 
-Wenn Sie mit dem Ergebnis zufrieden sind, würde ich Sie auf meine entwickelte Engine via der international renommierten SaaS-Plattform Apify verweisen:
+Um die Engine kennenzulernen, würde ich Ihnen anbieten, 50 Artikel aus Ihrem Sortiment unverbindlich und zunächst kostenfrei durch die Engine prüfen zu lassen. Eine kurze Antwort genügt.
+
+Wenn Sie mit dem Ergebnis zufrieden sind, verweise ich Sie gerne auf meine entwickelte Engine „Product-Safety“, auf die Sie rechtssicher und ideal an Ihre IT-Systeme angebunden über die international renommierte SaaS-Plattform Apify zugreifen können:
 https://apify.com/thfc_labs/eu-product-safety-actor
+
+Sollten Sie dort noch keinen Account besitzen: Sie können sich kostenlos registrieren und erhalten 5 $ Startguthaben (damit können Sie z. B. 1.000 Produkte prüfen lassen oder 100 Artikel über 10 Wochen lang wöchentlich überwachen).
 
 Viele Grüße
 Thomas Hartmannsgruber

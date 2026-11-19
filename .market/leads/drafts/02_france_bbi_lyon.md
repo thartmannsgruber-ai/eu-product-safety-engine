@@ -13,15 +13,19 @@
 ```text
 Madame, Monsieur,
 
-Je suis Thomas Hartmannsgruber de THFC Consulting et je développe des moteurs logiciels dédiés aux entreprises. Vous trouverez des informations détaillées sur mon parcours et sur nos moteurs technologiques directement sur notre page Labs :
+Je suis Thomas Hartmannsgruber de THFC Consulting et je développe des moteurs logiciels dédiés aux entreprises. Vous trouverez des informations détaillées sur mon parcours et sur nos moteurs directement sur mon site web :
 https://thfc-consulting.de/labs/product-safety-en
 
-Pour votre catalogue de produits, j'ai conçu un outil qui vérifie automatiquement les codes EAN et noms de produits par rapport à la base officielle EU Safety Gate. Comme vous le savez sans doute, le règlement européen sur la sécurité générale des produits (GPSR) est en vigueur depuis décembre 2024. Le système EU Safety Gate publiant de nouvelles alertes chaque semaine et les jouets figurant régulièrement parmi les catégories les plus signalées, il est essentiel pour votre conformité de rester à jour.
+Pour la gamme de produits de votre entreprise, j'ai développé un outil potentiellement intéressant qui vérifie automatiquement les codes EAN et noms de produits par rapport à la base officielle EU Safety Gate, car comme vous le savez peut-être, le règlement européen sur la sécurité générale des produits (GPSR) est en vigueur depuis décembre 2024.
 
-Afin de découvrir cet outil, je vous propose de vérifier 50 articles de votre catalogue de manière sans engagement et gratuite. Une simple réponse à cet e-mail suffit.
+Le système EU Safety Gate publiant de nouvelles alertes chaque semaine et les jouets figurant régulièrement parmi les catégories les plus signalées, il est essentiel pour votre conformité de rester à jour.
 
-Si le résultat vous convient, vous pourrez ensuite utiliser ce moteur en toute autonomie via la plateforme SaaS reconnue Apify :
+Afin de découvrir cet outil, je vous propose de faire vérifier 50 articles de votre catalogue de manière sans engagement et d'abord gratuite par notre moteur. Une simple réponse suffit.
+
+Si le résultat vous convient, je vous orienterai volontiers vers mon moteur « Product-Safety », auquel vous pouvez accéder en toute sécurité juridique et parfaitement intégré à vos systèmes informatiques via la plateforme SaaS reconnue Apify :
 https://apify.com/thfc_labs/eu-product-safety-actor
+
+Si vous ne possédez pas encore de compte Apify : l'inscription est gratuite et vous bénéficiez de 5 $ de crédit de bienvenue (ce qui vous permet par exemple de vérifier 1 000 produits ou d'assurer le suivi hebdomadaire de 100 articles pendant 10 semaines).
 
 Cordialement,
 Thomas Hartmannsgruber
