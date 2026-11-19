@@ -10,3 +10,4 @@ dist/
 
 
 .env
+.market/leads/sent_log.json
