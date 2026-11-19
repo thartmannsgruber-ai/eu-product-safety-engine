@@ -1,0 +1,57 @@
+country,company,category,city,email,email_other,website,phone,score,priority,source_dataset
+France,Télé Surprises Jeux et Jouets TSJJ,Grossiste,Marseille,tsjj@wanadoo.fr,,,,,High,dAcruWzARkclStSKY
+France,BBI Lyon,Grossiste,Genas,contact@bbi-pro.com,,,,,High,dAcruWzARkclStSKY
+France,One For Fun France,Distributeur,Paris,sales@oneforfun.com,,,,,High,dAcruWzARkclStSKY
+France,SARL JR Distribution / Kermesse-Fêtes,Distributeur,Saint-Nazaire-en-Royans,contact@kermesse-fetes.fr,,,,,High,dAcruWzARkclStSKY
+France,SAYAN France,Distributeur,Marseille,contact@sayan-france.fr,,,,,High,dAcruWzARkclStSKY
+France,Sud Grossiste,Grossiste,Bordeaux,contactsudgrossiste@gmail.com,,,,,High,dAcruWzARkclStSKY
+France,ARTOYZ,Distributeur,Paris,sales@artoyz.com,,,,,High,dAcruWzARkclStSKY
+France,Simple. by Le Jouet Simple,Fabricant de jouets,Paris,bonjour@lejouetsimple.fr,,,,,High,dAcruWzARkclStSKY
+France,Mondocash,Grossiste,Caudan,contact@mondocash.fr,,,,,Medium,dAcruWzARkclStSKY
+France,Léon Bulle,Grossiste,Clichy,contact@leonbulle.com,,,,,Medium,dAcruWzARkclStSKY
+Italy,Pama Trade Srl,Grossista,Calderara di Reno,commerciale@pamatrade.com,,https://www.pamatrade.com/,+39 051 646 6253,4.9,High,vocQIagjnciuRjUjT
+Italy,PAPINI GIOCATTOLI ingrosso,Grossista,Firenze,info@papinigiocattoli.it,,http://www.papinigiocattoli.it/,+39 055 315362,4.8,High,vocQIagjnciuRjUjT
+Italy,Basile Giocattoli SRL,Grossista,San Giovanni Lupatoto,info@basilegiocattoli.com,,http://www.basilegiocattoli.com/,+39 045 590825,4.4,High,vocQIagjnciuRjUjT
+Italy,Fratelli Pesce Ingrosso Giocattoli,Grossista,Mignanego,info@fratellipesce.com,,http://www.fratellipesce.com/,+39 010 600900,4,High,vocQIagjnciuRjUjT
+Italy,Gio.c.a.t. snc,Grossista,Ferrara,paoloartio@libero.it,,http://www.giocat.it/,+39 0532 51222,4.6,High,vocQIagjnciuRjUjT
+Italy,Lena Ingrosso Srl,Grossista,Ciampino,info@lenaingrosso.it,,http://www.lenaingrosso.it/,+39 06 7931 2326,3.9,High,7ob8fDGRZQqgr2Zhr
+Italy,G.M.G. Ambrogiocattoli Srl,Grossista,Milano,,,,+39 02 313344,5,High,cgyfV0Gn7xzV6NqPa
+Italy,FunLab,Produttore di giocattoli,Milano,info@funlab.it,,http://www.funlab.it/,+39 02 8717 8619,5,High,cgyfV0Gn7xzV6NqPa
+Spain,Sindiseca Toys,Mayorista,Montmeló,info@sindisecatoys.com,,,,5.0,High,0ipBXDqYssSX2FqfP
+Spain,Exclusivas Arvelo S.L.,Mayorista,Santa Cruz de Tenerife,info@jugueteriasarvelo.es,,,,5.0,High,0ipBXDqYssSX2FqfP
+Spain,Juguetes Junior,Mayorista,Madrid,juguetesjunior@juguetesjunior.es,,,,5.0,High,0ipBXDqYssSX2FqfP
+Spain,Dispersa Juguetes SL,Mayorista,Madrid,dispersa@dispersajuguetes.com,,,,4.9,High,0ipBXDqYssSX2FqfP
+Spain,Roldán Juguetes S.L.,Mayorista,,info@roldanjuguetes.com,,,,4.9,High,0ipBXDqYssSX2FqfP
+Spain,JUPESA S.A.,Mayorista,La Vila Joiosa,dpto.comercial@grupojupesa.es,,,,3.9,High,0ipBXDqYssSX2FqfP
+Spain,OcioStock,Mayorista,Arroyomolinos,info@ociostock.com,,,,4.3,High,0ipBXDqYssSX2FqfP
+Spain,International Dreamlove S.A.,Mayorista,Carmona,iberia@dreamlove.es,,http://www.dreamlove.eu/,+34 955 63 03 77,4.6,High,0ipBXDqYssSX2FqfP
+Spain,TOYS FURLONG S.L.,Mayorista,Badalona,info@toysfurlong.com,,http://www.toysfurlong.com/,+34 688 13 28 88,4.4,High,0ipBXDqYssSX2FqfP
+Spain,Juguetes Bruder by RuralToys,Distribuidor oficial,Ciudad Rodrigo,hola@juguetesbruder.com,,https://www.ruraltoys.es/juguetes-bruder/tienda/,+34 682 41 88 05,4.9,High,0ipBXDqYssSX2FqfP
+Netherlands,Vergeertoys B.V.,Groothandelaar,Waddinxveen,info@vergeertoys.nl,,https://www.vergeertoys.nl/,+31 6 26016290,5.0,High,f3TignfKmQKhKd757
+Netherlands,Dino Trading bv,Groothandelaar,Apeldoorn,helpdesk@dinotoys.nl,,http://www.dinotoys.nl/,+31 55 540 0040,4.9,High,f3TignfKmQKhKd757
+Netherlands,Helms Zelfbedieningsgroothandel BV Deventer,Groothandelaar,Deventer,info@helmsbv.nl,,https://www.helmsbv.nl/,+31 570 623 655,5.0,High,f3TignfKmQKhKd757
+Netherlands,HAZA - Witbaard,Groothandel,Almere,info@haza-witbaard.nl,,http://www.haza-witbaard.nl/,+31 85 488 1270,5.0,High,f3TignfKmQKhKd757
+Netherlands,Happy Seven,Groothandelaar,Nijkerk,info@happyseven.nl,,https://happyseven.nl/,+31 6 22804842,5.0,High,f3TignfKmQKhKd757
+Netherlands,United Supplies B.V.,Groothandelaar,Nederhorst Den Berg,info@unitedsupplies.nl,,http://www.unitedsupplies.nl/,+31 35 220 1000,5.0,High,f3TignfKmQKhKd757
+Netherlands,Zyntoo,Groothandel,Beverwijk,info@zyntoo.nl,,https://zyntoo.nl/,+31 85 212 9006,4.8,High,f3TignfKmQKhKd757
+Netherlands,Speelgoedland (Groothandel),Groothandelaar,Hoogvliet Rotterdam,info@speelgoedland.com,,http://www.speelgoedland.net/,+31 10 416 8900,4.7,High,f3TignfKmQKhKd757
+Netherlands,Mechato,Groothandelaar,Den Ilp,info@mechato.nl,,https://www.mechato.nl/,+31 20 482 3016,4.6,High,f3TignfKmQKhKd757
+Netherlands,Twisk Groothandel BV,Groothandelaar,Beverwijk,info@twiskbv.nl,,http://www.twiskbv.nl/,+31 251 220 641,4.4,High,f3TignfKmQKhKd757
+Netherlands,Gebr. Simon,Groothandelaar,Zwolle,info@simonspeelgoed.nl,,http://www.simonspeelgoed.nl/,+31 38 460 0015,4.0,Medium,f3TignfKmQKhKd757
+Netherlands,Spelendgoed,Groothandelaar,Almere,sales@spelendgoed.nl,,http://www.spelendgoed.nl/,+31 6 52652122,4.0,Medium,f3TignfKmQKhKd757
+Netherlands,Bellus Toys,Groothandelaar,Geldrop,info@bellustoys.nl,,https://www.bellustoys.com/,+31 40 767 6025,4.0,Medium,f3TignfKmQKhKd757
+Netherlands,Q&A Impex groothandel,Groothandelaar,Beverwijk,info@qagroothandel.nl,,http://www.qagroothandel.nl/,+31 251 785 236,3.5,Medium,f3TignfKmQKhKd757
+Netherlands,Ruby Toys,Importeur,Eindhoven,,,https://www.ruby-toys.com/,+31 40 304 1600,5.0,Low,f3TignfKmQKhKd757
+Netherlands,Rimex Toys,Groothandel,Baarle-Nassau,,,http://rimextoys.com/,+31 6 26880851,5.0,Low,f3TignfKmQKhKd757
+Poland,Dajla Hurtownia Zabawek,Importer,Jaworzno,iod@insert.com.pl,,http://www.dajla.pl/,+48 530 519 091,4.8,High,AgGRhaFPLMmyov8Hm
+Poland,MIKI Hurtownia Zabawek,Hurtownia,Modlniczka,b2b@miki.com.pl,,http://www.b2b.miki.com.pl/,+48 12 685 03 01,4.8,High,AgGRhaFPLMmyov8Hm
+Poland,Zabawki Hurtownia Internetowa,Hurtownia,Gdynia,info@hurtownia-internetowa.pl,,http://www.hurtownia-internetowa.pl/,+48 509 321 201,5.0,High,AgGRhaFPLMmyov8Hm
+Poland,BEMAG Hurtownia Zabawek,Hurtownia,Gutowo Wielkie,kontakt@bemag.pl,,https://bemag.pl/,+48 796 363 606,4.3,High,AgGRhaFPLMmyov8Hm
+Poland,Sidba Hurtownia Zabawek,Hurtownia,Białystok,sidba@sidba.com.pl,,http://www.sidba.com.pl/,+48 85 651 22 82,4.4,High,AgGRhaFPLMmyov8Hm
+Poland,F.H. LEAN / Lean Toys,Hurtownia,Zawiercie,zamowienia@leantoys.pl,,http://www.leantoys.pl/,+48 32 671 41 79,3.8,High,AgGRhaFPLMmyov8Hm
+Poland,Jokomisiada Hurtownia Zabawek,Hurtownia,Rożnowa (Wieliczka),sklep@jokomisiada.pl,,http://jokomisiada.pl/,+48 12 251 41 84,4.0,Medium,AgGRhaFPLMmyov8Hm
+Austria,Fürnis Spielwaren Großhandel,Großhändler,Wien,fuernis@fuernis.com,,,,5.0,High,kEHoHPG1pfNJee3Tv
+Austria,Spielma Holzspielzeug Manufaktur,Hersteller,St. Gotthard im Mühlkreis,monika.aschauer@spielma.at,,,,5.0,High,kEHoHPG1pfNJee3Tv
+Austria,BHL Business Handel Lackner KG,Großhändler,Judendorf-Straßengel,info@bhl.co.at,office@bhl.co.at,http://www.bhl-restposten.at/,,4.9,High,kEHoHPG1pfNJee3Tv
+Italy,Toys Service Ingrosso Giocattoli,Magazzino all'ingrosso,Torino,info@toysservice.it,,http://www.toysservice.it/,+39 011 585 9124,5,High,vocQIagjnciuRjUjT
+Italy,Mediatoys - Giocattoli all'ingrosso,Magazzino all'ingrosso,Funo,info@mediatoys.it,,http://mediatoys.shop/,+39 380 387 8111,2.3,High,vocQIagjnciuRjUjT

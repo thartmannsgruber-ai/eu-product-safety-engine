@@ -2,9 +2,30 @@ import { describe, it, expect } from 'vitest';
 import { classifyChildProduct } from '../src/child-safety.js';
 import type { AlertRecord } from '../src/schema.js';
 
+function createMockAlert(partial: Partial<AlertRecord>): AlertRecord {
+  return {
+    alert_number: 'TEST/001',
+    case_number: 'CASE-001',
+    publication_date: '2026-11-10',
+    category: 'Toys',
+    product: 'Test Product',
+    brand: 'Test Brand',
+    model: 'Test Model',
+    ean_barcodes: [],
+    risk_type: 'Injuries',
+    danger_description: 'Test danger',
+    measures: 'Recall from end users',
+    notifying_country: 'France',
+    country_of_origin: 'China',
+    risk_level: 'Serious risk',
+    source_url: 'https://ec.europa.eu/safety-gate-alerts/',
+    ...partial,
+  };
+}
+
 describe('Child Safety Classification', () => {
   it('correctly classifies a baby jacket with PFAS chemical risk', () => {
-    const alert: AlertRecord = {
+    const alert = createMockAlert({
       alert_number: 'SR/03208/26',
       publication_date: '2026-11-10',
       category: 'Clothing, textiles and fashion items',
@@ -14,7 +35,7 @@ describe('Child Safety Classification', () => {
       danger_description: 'Outer fabric contains high concentrations of PFOA and PFCA related compounds.',
       risk_type: 'Chemical, Environment',
       risk_level: 'Serious risk',
-    };
+    });
 
     const result = classifyChildProduct(alert);
     expect(result.isChildRelated).toBe(true);
@@ -23,7 +44,7 @@ describe('Child Safety Classification', () => {
   });
 
   it('correctly classifies magnetic toy sets with choking and magnet hazards', () => {
-    const alert: AlertRecord = {
+    const alert = createMockAlert({
       alert_number: 'SR/03158/26',
       publication_date: '2026-11-10',
       category: 'Toys',
@@ -33,7 +54,7 @@ describe('Child Safety Classification', () => {
       danger_description: 'Small parts and magnetic balls can be easily swallowed leading to choking and intestinal perforation.',
       risk_type: 'Choking, Injuries',
       risk_level: 'Serious risk',
-    };
+    });
 
     const result = classifyChildProduct(alert);
     expect(result.isChildRelated).toBe(true);
@@ -43,7 +64,7 @@ describe('Child Safety Classification', () => {
   });
 
   it('correctly rejects adult clothing and accessories (false-positive prevention)', () => {
-    const adultAlert: AlertRecord = {
+    const adultAlert = createMockAlert({
       alert_number: 'SR/03217/26',
       publication_date: '2026-11-10',
       category: 'Clothing, textiles and fashion items',
@@ -53,7 +74,7 @@ describe('Child Safety Classification', () => {
       danger_description: 'Outer fabric contains high concentrations of PFOA.',
       risk_type: 'Chemical, Environment',
       risk_level: 'Serious risk',
-    };
+    });
 
     const result = classifyChildProduct(adultAlert);
     expect(result.isChildRelated).toBe(false);
@@ -61,7 +82,7 @@ describe('Child Safety Classification', () => {
   });
 
   it('correctly rejects automotive, industrial, and protective items', () => {
-    const ppeAlert: AlertRecord = {
+    const ppeAlert = createMockAlert({
       alert_number: 'SR/03180/26',
       publication_date: '2026-11-10',
       category: 'Protective equipment',
@@ -71,7 +92,7 @@ describe('Child Safety Classification', () => {
       danger_description: 'Toe cap does not withstand required impact.',
       risk_type: 'Injuries',
       risk_level: 'Serious risk',
-    };
+    });
 
     const result = classifyChildProduct(ppeAlert);
     expect(result.isChildRelated).toBe(false);
@@ -99,118 +120,118 @@ describe('Child Safety Classification', () => {
 
   describe('Herznieren Audit Verification (S1-S8 Scenarios)', () => {
     it('S1: correctly identifies French baby product "Biberon pour bébé"', () => {
-      const alert: AlertRecord = {
+      const alert = createMockAlert({
         alert_number: 'FR/TEST/001',
         publication_date: '2026-11-18',
         category: 'Childcare articles',
         product: 'Biberon pour bébé en verre',
         brand: 'BébéConfort',
         model: 'Classic 250ml',
-      };
+      });
       const res = classifyChildProduct(alert);
       expect(res.isChildRelated).toBe(true);
       expect(res.ageGroup).toBe('baby');
     });
 
     it('S2: detects French choking hazard "risque d\'étouffement" without risk_type fallback', () => {
-      const alert: AlertRecord = {
+      const alert = createMockAlert({
         alert_number: 'FR/TEST/002',
         publication_date: '2026-11-18',
         category: 'Toys',
         product: 'Jouet musical',
         danger_description: 'Présence de petites pièces présentant un risque d\'étouffement pour les jeunes enfants.',
-      };
+      });
       const res = classifyChildProduct(alert);
       expect(res.isChildRelated).toBe(true);
       expect(res.hazards).toContain('choking');
     });
 
     it('S3: identifies French "poupée" even if category does not mention jouet', () => {
-      const alert: AlertRecord = {
+      const alert = createMockAlert({
         alert_number: 'FR/TEST/003',
         publication_date: '2026-11-18',
         category: 'Decorative items',
         product: 'Poupée traditionnelle en tissu',
-      };
+      });
       const res = classifyChildProduct(alert);
       expect(res.isChildRelated).toBe(true);
       expect(res.ageGroup).toBe('child');
     });
 
     it('S4: detects German compounds "Erstickungsgefahr" and "verschluckbare Kleinteile"', () => {
-      const alert: AlertRecord = {
+      const alert = createMockAlert({
         alert_number: 'DE/TEST/004',
         publication_date: '2026-11-18',
         category: 'Sonstiges',
         product: 'Kinder-Holzspielzeug',
         danger_description: 'Es besteht akute Erstickungsgefahr durch leicht verschluckbare Kleinteile.',
-      };
+      });
       const res = classifyChildProduct(alert);
       expect(res.isChildRelated).toBe(true);
       expect(res.hazards).toContain('choking');
     });
 
     it('S5 & S6: prevents false-positive chemical hazard on "could lead to" and "within reach of children"', () => {
-      const alert: AlertRecord = {
+      const alert = createMockAlert({
         alert_number: 'EN/TEST/005',
         publication_date: '2026-11-18',
         category: 'Furniture',
         product: 'Folding chair',
         danger_description: 'The mechanism could lead to injuries if left within reach of children.',
         risk_type: 'Injuries',
-      };
+      });
       const res = classifyChildProduct(alert);
       expect(res.hazards).not.toContain('chemical');
     });
 
     it('S7: detects plural "phthalates" and chemical compounds', () => {
-      const alert: AlertRecord = {
+      const alert = createMockAlert({
         alert_number: 'EN/TEST/007',
         publication_date: '2026-11-18',
         category: 'Toys',
         product: 'Plastic bath duck',
         danger_description: 'Plastic material contains phthalates above the permissible limit.',
-      };
+      });
       const res = classifyChildProduct(alert);
       expect(res.hazards).toContain('chemical');
     });
 
     it('S8: correctly flags genuine chemical markers (lead paint, Pb, REACH, bleihaltig) and avoids "bleibt"', () => {
-      const genuineAlert: AlertRecord = {
+      const genuineAlert = createMockAlert({
         alert_number: 'EN/TEST/008A',
         publication_date: '2026-11-18',
         category: 'Toys',
         product: 'Toy car',
         danger_description: 'Coated with lead paint, excessive Pb content violating REACH regulation.',
-      };
+      });
       expect(classifyChildProduct(genuineAlert).hazards).toContain('chemical');
 
-      const bleiAlert: AlertRecord = {
+      const bleiAlert = createMockAlert({
         alert_number: 'DE/TEST/008B',
         publication_date: '2026-11-18',
         category: 'Toys',
         product: 'Lötbausatz für Kinder',
         danger_description: 'Enthält bleihaltiges Lötzinn.',
-      };
+      });
       expect(classifyChildProduct(bleiAlert).hazards).toContain('chemical');
 
-      const negativeBleiAlert: AlertRecord = {
+      const negativeBleiAlert = createMockAlert({
         alert_number: 'DE/TEST/008C',
         publication_date: '2026-11-18',
         category: 'Toys',
         product: 'Holzklotz',
         danger_description: 'Das Produkt bleibt stabil unter Belastung.',
-      };
+      });
       expect(classifyChildProduct(negativeBleiAlert).hazards).not.toContain('chemical');
     });
 
     it('S9: handles German umlauts in compounds like "Plüschspielzeug"', () => {
-      const alert: AlertRecord = {
+      const alert = createMockAlert({
         alert_number: 'DE/TEST/009',
         publication_date: '2026-11-18',
         category: 'Sonstiges',
         product: 'Plüschspielzeug Bär',
-      };
+      });
       const res = classifyChildProduct(alert);
       expect(res.isChildRelated).toBe(true);
       expect(res.ageGroup).toBe('child');
