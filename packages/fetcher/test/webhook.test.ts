@@ -272,10 +272,12 @@ describe('dispatchWebhook', () => {
       expect(headers['User-Agent']).toBe(DEFAULT_USER_AGENT);
       expect(headers['User-Agent']).toMatch(/^eu-product-safety-engine\/\d+\.\d+\.\d+$/);
 
-      // Signatur pruefen
+      // Signatur pruefen (sowohl X-PSE-Signature als auch standard X-Hub-Signature-256)
       const expectedSignature = signPayload(JSON.stringify(samplePayload), secret);
       expect(headers['X-PSE-Signature']).toBe(expectedSignature);
       expect(headers['X-PSE-Signature']).toMatch(/^sha256=[0-9a-f]{64}$/);
+      expect(headers['X-Hub-Signature-256']).toBe(expectedSignature);
+      expect(headers['X-Hub-Signature-256']).toMatch(/^sha256=[0-9a-f]{64}$/);
 
       // Timestamp pruefen
       expect(headers['X-PSE-Timestamp']).toBeDefined();

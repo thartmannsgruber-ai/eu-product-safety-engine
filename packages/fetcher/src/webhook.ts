@@ -142,7 +142,9 @@ export async function dispatchWebhook(
 
     if (secret) {
       const timestamp = customTimestamp !== undefined ? String(customTimestamp) : Date.now().toString();
-      headers['X-PSE-Signature'] = signPayload(body, secret);
+      const signature = signPayload(body, secret);
+      headers['X-PSE-Signature'] = signature;
+      headers['X-Hub-Signature-256'] = signature;
       headers['X-PSE-Timestamp'] = timestamp;
     }
 

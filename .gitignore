@@ -5,6 +5,7 @@ dist/
 .tvtotal/
 *.lock
 *.tsbuildinfo
-storage/
+/storage/
+/apps/actor/storage/
 
 

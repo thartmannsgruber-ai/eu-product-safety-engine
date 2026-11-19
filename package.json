@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "private": true,
-  "license": "UNLICENSED",
+  "license": "MIT",
   "description": "ProductSafetyEngine Monorepo",
   "bin": {
     "eu-product-safety-mcp": "./apps/mcp/dist/index.js"

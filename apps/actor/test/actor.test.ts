@@ -563,6 +563,7 @@ describe('F07: Apify Actor Struktur & Konfiguration', () => {
         vi.spyOn(Actor, 'isAtHome').mockReturnValue(true);
         const chargeSpy = vi.spyOn(Actor, 'charge').mockResolvedValue({} as any);
         const pushSpy = vi.spyOn(Actor, 'pushData').mockResolvedValue({} as any);
+        vi.spyOn(Actor, 'setValue').mockResolvedValue({} as any);
 
         const emitter = new PpeEventEmitter();
         const result = await runActor(
