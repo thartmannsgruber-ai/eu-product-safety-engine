@@ -27,7 +27,7 @@ export const AMAZON_TLDS = [
 
 export type AmazonTld = (typeof AMAZON_TLDS)[number];
 
-const SHORTLINK_HOSTS = new Set(['amzn.to', 'www.amzn.to', 'a.co', 'www.a.co']);
+export const SHORTLINK_HOSTS = new Set(['amzn.to', 'www.amzn.to', 'a.co', 'www.a.co']);
 
 const PATH_PATTERNS = [
   /(?:^|\/)dp\/([a-z0-9]{10})(?:[/?#]|$)/i,

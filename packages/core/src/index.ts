@@ -4,3 +4,4 @@ export * from './gtin.js';
 export * from './storage.js';
 export * from './child-safety.js';
 export * from './asin.js';
+export * from './identifier.js';
