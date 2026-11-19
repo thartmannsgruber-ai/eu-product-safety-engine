@@ -135,8 +135,10 @@ def main():
     for lead in campaign:
         if not lead.get('email'):
             continue
-        if args.country and lead.get('country', '').lower() != args.country.lower():
-            continue
+        if args.country:
+            allowed_countries = [c.strip().lower() for c in args.country.split(',')]
+            if lead.get('country', '').lower() not in allowed_countries:
+                continue
         if lead['email'] in sent_log and not args.test_recipient:
             continue
         queue.append(lead)
