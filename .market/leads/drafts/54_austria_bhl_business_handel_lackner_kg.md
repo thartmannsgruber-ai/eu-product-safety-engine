@@ -17,17 +17,15 @@ ich bin Thomas Hartmannsgruber von THFC Consulting und entwickle zielgerichtete 
 https://thfc-consulting.de/labs/product-safety
 
 Für das Produktspektrum Ihres Unternehmens habe ich ein ggf. interessantes Werkzeug entwickelt, das EANs und Produktnamen automatisch gegen das EU Safety Gate abgleicht, denn wie Sie vielleicht wissen, gilt seit Dezember 2024 die neue EU-Produktsicherheitsverordnung (GPSR).
-
 Da das EU Safety Gate jede Woche neue Meldungen veröffentlicht und Spielzeug dort regelmäßig zu den häufigsten Kategorien gehört, ist es aus Compliance-Gesichtspunkten essenziell, auf dem aktuellen Stand zu bleiben.
 
 Um die Engine kennenzulernen, würde ich Ihnen anbieten, 50 Artikel aus Ihrem Sortiment unverbindlich und zunächst kostenfrei durch die Engine prüfen zu lassen. Eine kurze Antwort genügt.
 
-Wenn Sie mit dem Ergebnis zufrieden sind, verweise ich Sie gerne auf meine entwickelte Engine „Product-Safety“, auf die Sie rechtssicher und ideal an Ihre IT-Systeme angebunden über die international renommierte SaaS-Plattform Apify zugreifen können:
-https://apify.com/thfc_labs/eu-product-safety-actor
+Wenn Sie anschließend mit dem Ergebnis zufrieden sind, können Sie für die weitere Verwendung meiner entwickelten Engine „Product-Safety“  über die international renommierte SaaS-Plattform Apify zugreifen - rechtssicher und ideal an Ihre IT-Systeme angebunden. Hier der Link: https://apify.com/thfc_labs/eu-product-safety-actor
 
-Sollten Sie dort noch keinen Account besitzen: Sie können sich kostenlos registrieren und erhalten 5 $ Startguthaben (damit können Sie z. B. 1.000 Produkte prüfen lassen oder 100 Artikel über 10 Wochen lang wöchentlich überwachen).
+Sollten Sie bei der Apify Plattform noch keinen Account besitzen: Sie können sich kostenlos registrieren und erhalten 5$ Startguthaben (damit können Sie mit der Product-Safety Engine z. B. 1.000 Produkte prüfen lassen oder 100 Artikel über 10 Wochen lang wöchentlich überwachen).
 
-Viele Grüße
+Ich freue mich über eine Rückmeldung und Grüße aus Deutschland
 Thomas Hartmannsgruber
 THFC Consulting · thfc-consulting.de
 Großheppacherstraße 16/1 · 71364 Winnenden

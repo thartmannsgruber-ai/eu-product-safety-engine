@@ -132,17 +132,15 @@ ich bin Thomas Hartmannsgruber von THFC Consulting und entwickle zielgerichtete 
 https://thfc-consulting.de/labs/product-safety
 
 Für das Produktspektrum Ihres Unternehmens habe ich ein ggf. interessantes Werkzeug entwickelt, das EANs und Produktnamen automatisch gegen das EU Safety Gate abgleicht, denn wie Sie vielleicht wissen, gilt seit Dezember 2024 die neue EU-Produktsicherheitsverordnung (GPSR).
-
 Da das EU Safety Gate jede Woche neue Meldungen veröffentlicht und Spielzeug dort regelmäßig zu den häufigsten Kategorien gehört, ist es aus Compliance-Gesichtspunkten essenziell, auf dem aktuellen Stand zu bleiben.
 
 Um die Engine kennenzulernen, würde ich Ihnen anbieten, 50 Artikel aus Ihrem Sortiment unverbindlich und zunächst kostenfrei durch die Engine prüfen zu lassen. Eine kurze Antwort genügt.
 
-Wenn Sie mit dem Ergebnis zufrieden sind, verweise ich Sie gerne auf meine entwickelte Engine „Product-Safety“, auf die Sie rechtssicher und ideal an Ihre IT-Systeme angebunden über die international renommierte SaaS-Plattform Apify zugreifen können:
-{actor_url}
+Wenn Sie anschließend mit dem Ergebnis zufrieden sind, können Sie für die weitere Verwendung meiner entwickelten Engine „Product-Safety“  über die international renommierte SaaS-Plattform Apify zugreifen - rechtssicher und ideal an Ihre IT-Systeme angebunden. Hier der Link: {actor_url}
 
-Sollten Sie dort noch keinen Account besitzen: Sie können sich kostenlos registrieren und erhalten 5 $ Startguthaben (damit können Sie z. B. 1.000 Produkte prüfen lassen oder 100 Artikel über 10 Wochen lang wöchentlich überwachen).
+Sollten Sie bei der Apify Plattform noch keinen Account besitzen: Sie können sich kostenlos registrieren und erhalten 5$ Startguthaben (damit können Sie mit der Product-Safety Engine z. B. 1.000 Produkte prüfen lassen oder 100 Artikel über 10 Wochen lang wöchentlich überwachen).
 
-Viele Grüße
+Ich freue mich über eine Rückmeldung und Grüße aus Deutschland
 Thomas Hartmannsgruber
 THFC Consulting · thfc-consulting.de
 Großheppacherstraße 16/1 · 71364 Winnenden
@@ -157,17 +155,15 @@ Je suis Thomas Hartmannsgruber de THFC Consulting et je développe des moteurs l
 https://thfc-consulting.de/labs/product-safety-en
 
 Pour la gamme de produits de votre entreprise, j'ai développé un outil potentiellement intéressant qui vérifie automatiquement les codes EAN et noms de produits par rapport à la base officielle EU Safety Gate, car comme vous le savez peut-être, le règlement européen sur la sécurité générale des produits (GPSR) est en vigueur depuis décembre 2024.
-
 Le système EU Safety Gate publiant de nouvelles alertes chaque semaine et les jouets figurant régulièrement parmi les catégories les plus signalées, il est essentiel pour votre conformité de rester à jour.
 
 Afin de découvrir cet outil, je vous propose de faire vérifier 50 articles de votre catalogue de manière sans engagement et d'abord gratuite par notre moteur. Une simple réponse suffit.
 
-Si le résultat vous convient, je vous orienterai volontiers vers mon moteur « Product-Safety », auquel vous pouvez accéder en toute sécurité juridique et parfaitement intégré à vos systèmes informatiques via la plateforme SaaS reconnue Apify :
-{actor_url}
+Si vous êtes ensuite satisfait du résultat, vous pourrez accéder à mon moteur développé « Product-Safety » via la plateforme SaaS reconnue Apify – en toute sécurité juridique et parfaitement intégré à vos systèmes informatiques. Voici le lien : {actor_url}
 
-Si vous ne possédez pas encore de compte Apify : l'inscription est gratuite et vous bénéficiez de 5 $ de crédit de bienvenue (ce qui vous permet par exemple de vérifier 1 000 produits ou d'assurer le suivi hebdomadaire de 100 articles pendant 10 semaines).
+Si vous ne possédez pas encore de compte sur la plateforme Apify : l'inscription est gratuite et vous bénéficiez de 5 $ de crédit de bienvenue (ce qui vous permet avec le moteur Product-Safety par exemple de vérifier 1 000 produits ou d'assurer le suivi hebdomadaire de 100 articles pendant 10 semaines).
 
-Cordialement,
+Au plaisir d'échanger avec vous et salutations d'Allemagne,
 Thomas Hartmannsgruber
 THFC Consulting · thfc-consulting.de
 Großheppacherstraße 16/1 · 71364 Winnenden, Allemagne
@@ -182,17 +178,15 @@ Mijn naam is Thomas Hartmannsgruber van THFC Consulting en ik ontwikkel gerichte
 https://thfc-consulting.de/labs/product-safety-en
 
 Voor het productassortiment van uw onderneming heb ik een wellicht interessante tool ontwikkeld die EAN-codes en productnamen automatisch controleert tegen de officiële EU Safety Gate database, want zoals u wellicht weet geldt sinds december 2024 de nieuwe Europese Verordening Algemene Productveiligheid (GPSR).
-
 Aangezien het EU Safety Gate wekelijks nieuwe meldingen publiceert en speelgoed regelmatig tot de meest gemelde categorieën behoort, is het vanuit compliance-oogpunt essentieel om actueel te blijven.
 
 Om vrijblijvend kennis te maken met de engine, bied ik u aan om eerst 50 artikelen uit uw assortiment kosteloos door de engine te laten controleren. Een kort antwoord is voldoende.
 
-Indien u tevreden bent over het resultaat, verwijs ik u graag naar mijn ontwikkelde engine "Product-Safety", waartoe u juridisch veilig en optimaal gekoppeld aan uw IT-systemen toegang heeft via het internationaal gerenommeerde SaaS-platform Apify:
-{actor_url}
+Indien u vervolgens tevreden bent over het resultaat, kunt u voor het verdere gebruik van mijn ontwikkelde engine "Product-Safety" terecht via het internationaal gerenommeerde SaaS-platform Apify – juridisch veilig en optimaal gekoppeld aan uw IT-systemen. Hier is de link: {actor_url}
 
-Mocht u daar nog geen account hebben: u kunt zich gratis registreren en ontvangt $ 5 starttegoed (waarmee u bijv. 1.000 producten kunt laten controleren of 100 artikelen gedurende 10 weken wekelijks kunt monitoren).
+Mocht u bij het Apify-platform nog geen account hebben: u kunt zich gratis registreren en ontvangt $ 5 starttegoed (waarmee u met de Product-Safety engine bijv. 1.000 producten kunt laten controleren of 100 artikelen gedurende 10 weken wekelijks kunt monitoren).
 
-Met vriendelijke groet,
+Ik zie uit naar uw reactie en vriendelijke groeten uit Duitsland,
 Thomas Hartmannsgruber
 THFC Consulting · thfc-consulting.de
 Großheppacherstraße 16/1 · 71364 Winnenden, Duitsland
@@ -207,17 +201,15 @@ sono Thomas Hartmannsgruber di THFC Consulting e sviluppo motori software mirati
 https://thfc-consulting.de/labs/product-safety-en
 
 Per la gamma di prodotti della vostra azienda ho sviluppato uno strumento potenzialmente interessante che confronta automaticamente codici EAN e denominazioni prodotto con il database ufficiale EU Safety Gate, poiché come forse saprete da dicembre 2024 è in vigore il nuovo regolamento europeo sulla sicurezza generale dei prodotti (GPSR).
-
 Dato che l'EU Safety Gate pubblica nuove segnalazioni ogni settimana e i giocattoli rientrano regolarmente tra le categorie più interessate, è essenziale sotto il profilo della conformità rimanere sempre aggiornati.
 
 Per farvi conoscere il motore, vi propongo di far verificare 50 articoli del vostro assortimento senza impegno e inizialmente a titolo gratuito tramite il motore stesso. È sufficiente una breve risposta.
 
-Se sarete soddisfatti del risultato, vi rinvio volentieri al motore "Product-Safety", a cui potete accedere in piena conformità giuridica e perfettamente integrato nei vostri sistemi IT tramite la rinomata piattaforma SaaS internazionale Apify:
-{actor_url}
+Se sarete successivamente soddisfatti del risultato, potrete accedere per l'uso continuo al mio motore "Product-Safety" tramite la rinomata piattaforma SaaS internazionale Apify – in piena conformità giuridica e perfettamente integrato nei vostri sistemi IT. Ecco il link: {actor_url}
 
-Se non disponete ancora di un account: potete registrarvi gratuitamente e ricevere 5 $ di credito iniziale (con cui potrete ad es. verificare 1.000 prodotti oppure monitorare settimanalmente 100 articoli per 10 settimane).
+Se non disponete ancora di un account sulla piattaforma Apify: potete registrarvi gratuitamente e ricevere 5 $ di credito iniziale (con cui potrete con il motore Product-Safety ad es. verificare 1.000 prodotti oppure monitorare settimanalmente 100 articoli per 10 settimane).
 
-Cordiali saluti,
+Resto in attesa di un vostro riscontro e vi porgo cordiali saluti dalla Germania,
 Thomas Hartmannsgruber
 THFC Consulting · thfc-consulting.de
 Großheppacherstraße 16/1 · 71364 Winnenden, Germania
@@ -232,17 +224,15 @@ Soy Thomas Hartmannsgruber, de THFC Consulting, y desarrollo motores de software
 https://thfc-consulting.de/labs/product-safety-en
 
 Para la gama de productos de su empresa he desarrollado una herramienta de posible interés que coteja automáticamente códigos EAN y nombres de productos con el sistema oficial EU Safety Gate, ya que, como sabrán, desde diciembre de 2024 se aplica el nuevo Reglamento General de Seguridad de los Productos de la UE (GPSR).
-
 Dado que el EU Safety Gate publica nuevas alertas cada semana y los juguetes se encuentran habitualmente entre las categorías con mayor número de avisos, resulta esencial desde el punto de vista del cumplimiento normativo mantenerse al día.
 
 Para conocer el funcionamiento del motor, les ofrezco revisar 50 artículos de su catálogo de forma gratuita y sin compromiso mediante el propio motor. Basta con una breve respuesta.
 
-Si quedan satisfechos con el resultado, les remitiré con gusto a mi motor «Product-Safety», al que pueden acceder con plena seguridad jurídica y perfectamente integrado en sus sistemas informáticos a través de la reconocida plataforma internacional SaaS Apify:
-{actor_url}
+Si posteriormente quedan satisfechos con el resultado, podrán acceder para el uso continuado a mi motor «Product-Safety» a través de la reconocida plataforma internacional SaaS Apify – con plena seguridad jurídica y perfectamente integrado en sus sistemas informáticos. Aquí tienen el enlace: {actor_url}
 
-Si aún no disponen de cuenta en dicha plataforma: pueden registrarse gratis y recibir 5 $ de saldo inicial (lo que les permite, por ejemplo, verificar 1.000 productos o supervisar semanalmente 100 artículos durante 10 semanas).
+Si aún no disponen de cuenta en la plataforma Apify: pueden registrarse gratis y recibir 5 $ de saldo inicial (lo que les permite con el motor Product-Safety, por ejemplo, verificar 1.000 productos o supervisar semanalmente 100 artículos durante 10 semanas).
 
-Un cordial saludo,
+Agradezco de antemano su respuesta y les envío un cordial saludo desde Alemania,
 Thomas Hartmannsgruber
 THFC Consulting · thfc-consulting.de
 Großheppacherstraße 16/1 · 71364 Winnenden, Alemania
@@ -257,17 +247,15 @@ My name is Thomas Hartmannsgruber from THFC Consulting. I develop specialized so
 https://thfc-consulting.de/labs/product-safety-en
 
 For your company's product range, I have developed an engine that automatically cross-checks EAN barcodes and product titles against the official EU Safety Gate database. As you may know, the new EU General Product Safety Regulation (GPSR) has been in force since December 2024.
-
 Because the EU Safety Gate publishes new recall alerts every week, and toys consistently represent one of the most frequently flagged categories, staying continuously compliant is essential.
 
 To introduce you to the engine, I would be glad to check 50 items from your product range free of charge and without any obligation. A brief reply to this email is all it takes.
 
-If you are satisfied with the results, you can access my "Product-Safety" engine with full legal certainty and seamless IT integration via the internationally renowned SaaS platform Apify:
-{actor_url}
+If you are subsequently satisfied with the results, you can access my "Product-Safety" engine for continued use via the internationally renowned SaaS platform Apify – with full legal certainty and seamless IT integration. Here is the link: {actor_url}
 
-If you do not have an Apify account yet: registration is free and includes $5 in welcome credits (allowing you, for example, to screen 1,000 products or monitor 100 SKUs weekly over 10 weeks).
+If you do not have an account on the Apify platform yet: registration is free and includes $5 in welcome credits (allowing you with the Product-Safety engine, for example, to screen 1,000 products or monitor 100 SKUs weekly over 10 weeks).
 
-Best regards,
+I look forward to hearing from you and send best regards from Germany,
 Thomas Hartmannsgruber
 THFC Consulting · thfc-consulting.de
 Großheppacherstraße 16/1 · 71364 Winnenden, Germany
