@@ -24,6 +24,28 @@ from scripts.crm.crawler import (
     clean_subject_prefix,
     decode_mime_header,
 )
+from scripts.crm.engine_runner import (
+    AuditHit,
+    AuditItem,
+    AuditResult,
+    AuditRunReport,
+    SafetyGateEngine,
+    extract_from_csv,
+    extract_from_email_or_attachments,
+    extract_gtins_and_products,
+    normalize_to_gtin14,
+    validate_gtin_checksum,
+)
+from scripts.crm.report_generator import (
+    STANDARD_DISCLAIMER_TEMPLATE,
+    ZERO_HITS_NOTE,
+    format_safety_gate_date,
+    generate_markdown_report,
+    generate_report,
+    generate_text_report,
+    get_standard_disclaimer,
+    get_zero_hits_note,
+)
 from scripts.crm.storage import (
     CRMStorage,
     LeadStatus,
@@ -61,4 +83,24 @@ __all__ = [
     "InboundMailCrawler",
     "clean_subject_prefix",
     "decode_mime_header",
+    # Engine Runner
+    "AuditHit",
+    "AuditItem",
+    "AuditResult",
+    "AuditRunReport",
+    "SafetyGateEngine",
+    "extract_gtins_and_products",
+    "extract_from_csv",
+    "extract_from_email_or_attachments",
+    "normalize_to_gtin14",
+    "validate_gtin_checksum",
+    # Report Generator
+    "STANDARD_DISCLAIMER_TEMPLATE",
+    "ZERO_HITS_NOTE",
+    "format_safety_gate_date",
+    "get_standard_disclaimer",
+    "get_zero_hits_note",
+    "generate_report",
+    "generate_text_report",
+    "generate_markdown_report",
 ]
