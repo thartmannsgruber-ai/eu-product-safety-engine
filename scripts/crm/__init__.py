@@ -46,6 +46,25 @@ from scripts.crm.report_generator import (
     get_standard_disclaimer,
     get_zero_hits_note,
 )
+from scripts.crm.review_queue import (
+    ALLOWED_TRANSITIONS,
+    DraftNotFoundError,
+    DraftStatus,
+    InvalidStatusTransitionError,
+    ReviewQueue,
+    VALID_DRAFT_STATUSES,
+    get_default_queue,
+    set_default_queue,
+)
+from scripts.crm.drafter import (
+    APIFY_ACTOR_URL,
+    ResponseDraft,
+    ResponseDrafter,
+    draft_and_enqueue,
+    draft_response,
+    get_default_drafter,
+    normalize_language_code,
+)
 from scripts.crm.storage import (
     CRMStorage,
     LeadStatus,
@@ -103,4 +122,21 @@ __all__ = [
     "generate_report",
     "generate_text_report",
     "generate_markdown_report",
+    # Review Queue (HITL)
+    "DraftStatus",
+    "VALID_DRAFT_STATUSES",
+    "ALLOWED_TRANSITIONS",
+    "DraftNotFoundError",
+    "InvalidStatusTransitionError",
+    "ReviewQueue",
+    "get_default_queue",
+    "set_default_queue",
+    # Drafter
+    "APIFY_ACTOR_URL",
+    "ResponseDraft",
+    "ResponseDrafter",
+    "draft_response",
+    "draft_and_enqueue",
+    "get_default_drafter",
+    "normalize_language_code",
 ]
