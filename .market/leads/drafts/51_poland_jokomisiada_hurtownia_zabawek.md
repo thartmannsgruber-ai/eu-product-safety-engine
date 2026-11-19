@@ -4,29 +4,29 @@
 - **Language:** EN
 - **Website:** http://jokomisiada.pl/
 - **Phone:** +48 12 251 41 84
-- **Detected Focus:** wholesale toy range, plush and recreational play items
+- **Detected Focus:** Hurtownia
 
 ### Subject:
-`EU-GPSR Compliance & Amazon Listing Blocks: Catalog Audit for Jokomisiada Hurtownia Zabawek`
+`Safety Gate compliance check for Jokomisiada Hurtownia Zabawek?`
 
 ### Body:
 ```text
-Hello,
+Dear Sir or Madam,
 
-While reviewing your product range (wholesale toy range, plush and recreational play items), we identified **34 recent EU Safety Gate (RAPEX) recall alerts** directly affecting your toy categories.
+My name is Thomas Hartmannsgruber from THFC Consulting. I develop specialized software engines for businesses. For your product context, I have built a tool that automatically cross-checks EAN barcodes and product titles against the official EU Safety Gate database.
 
-Under the new **EU GPSR (Regulation 2023/988)**, wholesalers and distributors carry direct liability. Furthermore, marketplaces like **Amazon and Allegro** immediately suspend your B2B resellers' listings when an EAN or batch matches a Safety Gate alert.
+As you may know, the new EU General Product Safety Regulation (GPSR) has been in force since December 2024. Because the EU Safety Gate publishes new recall alerts every week, and toys consistently represent one of the most frequently flagged categories, staying continuously compliant is essential.
 
-Our **ProductSafetyEngine** automates catalog screening against the official EU Safety Gate and US CPSC databases before goods ship.
+To introduce you to the engine, I would be glad to check 50 items from your product range free of charge and without any obligation. A brief reply with your EANs or product titles is all it takes.
 
-**Free 50-SKU Safety Audit for Jokomisiada Hurtownia Zabawek:**
-1. **Zero-Setup Report:** Simply reply to this email with a CSV/Excel file of up to 50 EANs or product titles. We will return your complete PDF compliance report within 2 hours.
-2. **Self-Service (via Apify Cloud/API):** Run the check directly via our engine: https://apify.com/store
+If you are satisfied with the results, you can continue using the engine flexibly via the internationally renowned SaaS platform Apify:
+https://apify.com/thfc_labs/eu-product-safety-actor
 
 Best regards,
+Thomas Hartmannsgruber
+THFC Consulting · thfc-consulting.de
+Großheppacherstraße 16/1 · 71364 Winnenden, Germany
 
-Thomas
-THFC Consulting
-info@thfc-consulting.de
+Not interested? Simply reply "No" and I will not contact you again.
 
 ```

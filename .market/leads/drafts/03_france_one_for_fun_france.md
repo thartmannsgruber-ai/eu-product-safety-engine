@@ -4,29 +4,29 @@
 - **Language:** FR
 - **Website:** 
 - **Phone:** 
-- **Detected Focus:** assortiment de jouets, peluches et jeux récréatifs
+- **Detected Focus:** Distributeur
 
 ### Subject:
-`Conformité GPSR & blocages Amazon/FNAC : Audit de sécurité pour One For Fun France`
+`Vérification Safety Gate pour One For Fun France ?`
 
 ### Body:
 ```text
-Bonjour,
+Madame, Monsieur,
 
-Suite à une analyse rapide de votre catalogue (assortiment de jouets, peluches et jeux récréatifs), nous avons relevé **34 alertes de rappel officielles (EU Safety Gate / RAPEX)** récentes dans vos catégories de produits.
+Je suis Thomas Hartmannsgruber de THFC Consulting et je développe des moteurs logiciels dédiés aux entreprises. Pour votre catalogue de produits, j'ai conçu un outil qui vérifie automatiquement les codes EAN et noms de produits par rapport à la base officielle EU Safety Gate.
 
-Avec l'entrée en vigueur du règlement **UE-GPSR (2023/988)**, la responsabilité des grossistes et importateurs de jouets est directement engagée. De plus, les marketplaces (**Amazon, FNAC, Cdiscount**) suspendent désormais automatiquement les comptes de vos revendeurs B2B en cas de correspondance RAPEX.
+Comme vous le savez, le nouveau règlement européen sur la sécurité générale des produits (GPSR) est entré en vigueur en décembre 2024. Le système EU Safety Gate publiant de nouvelles alertes chaque semaine et les jouets figurant régulièrement parmi les catégories les plus signalées, il est essentiel pour votre conformité de rester à jour.
 
-Nous avons développé la **ProductSafetyEngine** pour automatiser la vérification de vos références face aux bases EU Safety Gate et CPSC avant expédition.
+Afin de vous faire découvrir cet outil, je vous propose de vérifier 50 articles de votre catalogue de manière sans engagement et gratuite. Une simple réponse à cet e-mail avec vos codes EAN ou références suffit.
 
-**Audit gratuit de 50 références pour One For Fun France :**
-1. **Option rapide (sans inscription) :** Répondez simplement à cet e-mail avec une liste de 50 codes EAN/produits (CSV ou Excel). Nous vous renvoyons votre rapport de conformité sous 2 heures.
-2. **Option Self-Service (Cloud/API Apify) :** Testez directement vos références sur notre moteur : https://apify.com/store
+Si le résultat vous convient, vous pourrez ensuite utiliser ce moteur en toute autonomie via la plateforme SaaS reconnue Apify :
+https://apify.com/thfc_labs/eu-product-safety-actor
 
 Cordialement,
+Thomas Hartmannsgruber
+THFC Consulting · thfc-consulting.de
+Großheppacherstraße 16/1 · 71364 Winnenden, Allemagne
 
-Thomas
-THFC Consulting
-info@thfc-consulting.de
+Pas intéressé ? Répondez simplement « Non » et je ne vous recontacterai pas.
 
 ```

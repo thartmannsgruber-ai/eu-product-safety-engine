@@ -110,9 +110,8 @@ def analyze_profile(company, category, title, desc, country):
 def generate_draft(lead, title, desc):
     country = lead['country']
     company = lead['company']
-    category = lead['category']
     email = lead['email']
-    apify_url = "https://apify.com/store"
+    actor_url = "https://apify.com/thfc_labs/eu-product-safety-actor"
     
     # Language mapping
     lang_map = {
@@ -125,128 +124,125 @@ def generate_draft(lead, title, desc):
     }
     lang = lang_map.get(country, 'en')
     
-    cat_dict, rapex_count = analyze_profile(company, category, title, desc, country)
-    cat_text = cat_dict[lang]
-    
-    if lang == 'nl':
-        subject = f"EU-GPSR & Bol.com/Amazon-blokkades: Risico-check voor {company}"
-        body = f"""Goedendag,
+    if lang == 'de':
+        subject = f"Safety-Gate-Abgleich für {company}?"
+        body = f"""Sehr geehrte Damen und Herren,
 
-Tijdens een analyse van uw online assortiment ({cat_text}) viel ons op dat er in exact deze speelgoedcategorieën recent **{rapex_count} nieuwe EU Safety Gate (RAPEX) waarschuwingen** zijn gepubliceerd.
+ich bin Thomas Hartmannsgruber von THFC Consulting und entwickle zielgerichtete Software-Engines für Unternehmen. Für Ihren Produkt-Kontext habe ich ein Werkzeug gebaut, das EANs und Produktnamen automatisch gegen das EU Safety Gate abgleicht.
 
-Onder de nieuwe **EU-GPSR (Verordening 2023/988)** zijn distributeurs en groothandels direct aansprakelijk. Bovendien blokkeren marktplaatsen zoals **Bol.com en Amazon** de accounts van uw B2B-afnemers onmiddellijk zodra één EAN of merk op de RAPEX-lijst verschijnt.
+Wie Sie sicherlich wissen, gilt seit Dezember 2024 die neue EU-Produktsicherheitsverordnung (GPSR). Da das EU Safety Gate jede Woche neue Meldungen veröffentlicht und Spielzeug regelmäßig zu den am häufigsten betroffenen Kategorien gehört, ist es aus Compliance-Gesichtspunkten essenziell, auf dem aktuellen Stand zu bleiben.
 
-Met onze **ProductSafetyEngine** automatiseren wij deze controle direct tegen de Europese Safety Gate en US CPSC databases.
+Um Ihnen die Engine unverbindlich vorzustellen, biete ich Ihnen an, 50 Artikel aus Ihrem Sortiment zunächst kostenlos zu prüfen. Eine kurze Antwort mit Ihren EANs oder Artikelnamen genügt.
 
-**Gratis proef-audit (50 artikelen) voor {company}:**
-1. **Zonder technische setup:** Stuur als antwoord op deze mail een CSV/Excel met maximaal 50 EAN's of productnamen. U ontvangt binnen 2 uur uw volledige GPSR-risicorapport per PDF.
-2. **Direct zelf testen (via Apify API/Cloud):** Start de controle direct zelf via onze engine: {apify_url}
+Wenn Sie mit dem Ergebnis zufrieden sind, können Sie die Engine künftig flexibel über die international renommierte SaaS-Plattform Apify nutzen:
+{actor_url}
 
-Met vriendelijke groet,
+Viele Grüße
+Thomas Hartmannsgruber
+THFC Consulting · thfc-consulting.de
+Großheppacherstraße 16/1 · 71364 Winnenden
 
-Thomas
-THFC Consulting
-info@thfc-consulting.de
+Kein Interesse? Antworten Sie einfach kurz mit „Nein“ – dann melde ich mich nicht wieder.
 """
     elif lang == 'fr':
-        subject = f"Conformité GPSR & blocages Amazon/FNAC : Audit de sécurité pour {company}"
-        body = f"""Bonjour,
+        subject = f"Vérification Safety Gate pour {company} ?"
+        body = f"""Madame, Monsieur,
 
-Suite à une analyse rapide de votre catalogue ({cat_text}), nous avons relevé **{rapex_count} alertes de rappel officielles (EU Safety Gate / RAPEX)** récentes dans vos catégories de produits.
+Je suis Thomas Hartmannsgruber de THFC Consulting et je développe des moteurs logiciels dédiés aux entreprises. Pour votre catalogue de produits, j'ai conçu un outil qui vérifie automatiquement les codes EAN et noms de produits par rapport à la base officielle EU Safety Gate.
 
-Avec l'entrée en vigueur du règlement **UE-GPSR (2023/988)**, la responsabilité des grossistes et importateurs de jouets est directement engagée. De plus, les marketplaces (**Amazon, FNAC, Cdiscount**) suspendent désormais automatiquement les comptes de vos revendeurs B2B en cas de correspondance RAPEX.
+Comme vous le savez, le nouveau règlement européen sur la sécurité générale des produits (GPSR) est entré en vigueur en décembre 2024. Le système EU Safety Gate publiant de nouvelles alertes chaque semaine et les jouets figurant régulièrement parmi les catégories les plus signalées, il est essentiel pour votre conformité de rester à jour.
 
-Nous avons développé la **ProductSafetyEngine** pour automatiser la vérification de vos références face aux bases EU Safety Gate et CPSC avant expédition.
+Afin de vous faire découvrir cet outil, je vous propose de vérifier 50 articles de votre catalogue de manière sans engagement et gratuite. Une simple réponse à cet e-mail avec vos codes EAN ou références suffit.
 
-**Audit gratuit de 50 références pour {company} :**
-1. **Option rapide (sans inscription) :** Répondez simplement à cet e-mail avec une liste de 50 codes EAN/produits (CSV ou Excel). Nous vous renvoyons votre rapport de conformité sous 2 heures.
-2. **Option Self-Service (Cloud/API Apify) :** Testez directement vos références sur notre moteur : {apify_url}
+Si le résultat vous convient, vous pourrez ensuite utiliser ce moteur en toute autonomie via la plateforme SaaS reconnue Apify :
+{actor_url}
 
 Cordialement,
+Thomas Hartmannsgruber
+THFC Consulting · thfc-consulting.de
+Großheppacherstraße 16/1 · 71364 Winnenden, Allemagne
 
-Thomas
-THFC Consulting
-info@thfc-consulting.de
+Pas intéressé ? Répondez simplement « Non » et je ne vous recontacterai pas.
+"""
+    elif lang == 'nl':
+        subject = f"Safety Gate controle voor {company}?"
+        body = f"""Geachte heer, mevrouw,
+
+Mijn naam is Thomas Hartmannsgruber van THFC Consulting en ik ontwikkel gerichte software-engines voor bedrijven. Voor uw productassortiment heb ik een tool gebouwd die EAN-codes en productnamen automatisch controleert tegen de officiële EU Safety Gate database.
+
+Zoals u wellicht weet, geldt sinds december 2024 de nieuwe Europese Verordening Algemene Productveiligheid (GPSR). Aangezien het EU Safety Gate wekelijks nieuwe meldingen publiceert en speelgoed regelmatig tot de meest gemelde categorieën behoort, is het vanuit compliance-oogpunt essentieel om actueel te blijven.
+
+Om u vrijblijvend kennis te laten maken met de engine, bied ik u aan om eerst 50 artikelen uit uw assortiment kosteloos te controleren. Een kort antwoord op deze mail met uw EAN's of artikelnamen is voldoende.
+
+Indien u tevreden bent over het resultaat, kunt u de engine desgewenst flexibel inzetten via het internationaal gerenommeerde SaaS-platform Apify:
+{actor_url}
+
+Met vriendelijke groet,
+Thomas Hartmannsgruber
+THFC Consulting · thfc-consulting.de
+Großheppacherstraße 16/1 · 71364 Winnenden, Duitsland
+
+Geen interesse? Reageer kort met "Nee" en ik neem geen contact meer met u op.
 """
     elif lang == 'it':
-        subject = f"Regolamento UE GPSR e blocchi Amazon: Verifica catalogo per {company}"
-        body = f"""Buongiorno,
+        subject = f"Verifica Safety Gate per {company}?"
+        body = f"""Gentili signori,
 
-Analizzando il vostro assortimento online ({cat_text}), abbiamo riscontrato che nelle vostre categorie di giocattoli sono state emesse di recente **{rapex_count} segnalazioni ufficiali di richiamo EU Safety Gate (RAPEX)**.
+sono Thomas Hartmannsgruber di THFC Consulting e sviluppo motori software mirati per le aziende. Per il vostro catalogo prodotti ho realizzato uno strumento che confronta automaticamente codici EAN e denominazioni prodotto con il database ufficiale EU Safety Gate.
 
-Con il nuovo regolamento **UE GPSR (2023/988)**, distributori e grossisti rispondono direttamente della conformità. Inoltre, marketplace come **Amazon** bloccano istantaneamente le inserzioni dei vostri clienti B2B se un articolo o lotto compare nei database RAPEX.
+Come forse saprete, da dicembre 2024 è in vigore il nuovo regolamento europeo sulla sicurezza generale dei prodotti (GPSR). Poiché l'EU Safety Gate pubblica nuove segnalazioni ogni settimana e i giocattoli rientrano regolarmente tra le categorie più interessate, è essenziale sotto il profilo della conformità rimanere sempre aggiornati.
 
-Con la nostra **ProductSafetyEngine** automatizziamo lo screening dei cataloghi B2B direttamente sui database ufficiali EU Safety Gate e US CPSC.
+Per farvi conoscere il funzionamento del motore, vi propongo di verificare 50 articoli del vostro assortimento senza alcun impegno e gratuitamente. È sufficiente rispondere a questa e-mail allegando i vostri codici EAN o nomi prodotto.
 
-**Verifica gratuita di 50 articoli per {company}:**
-1. **Report immediato via e-mail:** Rispondete a questa mail allegando un file CSV/Excel con massimo 50 codici EAN o nomi prodotto. Riceverete il report PDF completo entro 2 ore.
-2. **Test diretto (Apify Cloud/API):** Eseguite la scansione in autonomia tramite la nostra piattaforma: {apify_url}
+Se sarete soddisfatti del risultato, potrete in seguito utilizzare il motore in totale autonomia tramite la rinomata piattaforma SaaS internazionale Apify:
+{actor_url}
 
 Cordiali saluti,
+Thomas Hartmannsgruber
+THFC Consulting · thfc-consulting.de
+Großheppacherstraße 16/1 · 71364 Winnenden, Germania
 
-Thomas
-THFC Consulting
-info@thfc-consulting.de
+Non siete interessati? Rispondete semplicemente "No" e non vi ricontatterò più.
 """
     elif lang == 'es':
-        subject = f"Normativa UE GPSR y bloqueos en Amazon: Auditoría para {company}"
-        body = f"""Hola,
+        subject = f"Verificación Safety Gate para {company}?"
+        body = f"""Estimados señores:
 
-Al revisar su catálogo online ({cat_text}), hemos detectado **{rapex_count} alertas recientes en el sistema EU Safety Gate (RAPEX)** dentro de sus categorías de juguetes.
+Soy Thomas Hartmannsgruber, de THFC Consulting, y desarrollo motores de software orientados a empresas. Para su catálogo de productos he diseñado una herramienta que coteja automáticamente códigos EAN y nombres de productos con el sistema oficial EU Safety Gate.
 
-Bajo el nuevo reglamento **UE GPSR (2023/988)**, los mayoristas y distribuidores asumen responsabilidad directa. Además, plataformas como **Amazon** suspenden de inmediato los listados de sus clientes B2B cuando un EAN o marca coincide con una alerta RAPEX.
+Como sabrán, desde diciembre de 2024 se aplica el nuevo Reglamento General de Seguridad de los Productos de la UE (GPSR). Dado que el EU Safety Gate publica nuevas alertas cada semana y los juguetes se encuentran habitualmente entre las categorías con mayor número de avisos, resulta esencial desde el punto de vista del cumplimiento normativo mantenerse al día.
 
-Con **ProductSafetyEngine** automatizamos el cruce de su catálogo contra las bases oficiales EU Safety Gate y US CPSC para proteger su cadena de suministro.
+Para que conozcan la herramienta, les ofrezco revisar 50 artículos de su catálogo de forma gratuita y sin compromiso. Basta con responder a este correo indicando sus códigos EAN o nombres de producto.
 
-**Auditoría gratuita de 50 EANs para {company}:**
-1. **Vía directa (sin registro):** Responda a este correo con un archivo CSV/Excel de hasta 50 EANs o productos y le enviaremos el informe de riesgos en PDF en menos de 2 horas.
-2. **Acceso directo (Apify Cloud/API):** Ejecute el análisis usted mismo en nuestro motor: {apify_url}
+Si quedan satisfechos con el resultado, podrán utilizar el motor cuando lo deseen a través de la reconocida plataforma internacional SaaS Apify:
+{actor_url}
 
-Atentamente,
+Un cordial saludo,
+Thomas Hartmannsgruber
+THFC Consulting · thfc-consulting.de
+Großheppacherstraße 16/1 · 71364 Winnenden, Alemania
 
-Thomas
-THFC Consulting
-info@thfc-consulting.de
-"""
-    elif lang == 'de':
-        subject = f"EU-GPSR & Amazon-Sperren: Kostenloser Katalog-Risikocheck für {company}"
-        body = f"""Guten Tag,
-
-bei einer Kurzanalyse Ihres Online-Sortiments ({cat_text}) haben wir festgestellt, dass es in genau diesen Spielwaren-Kategorien zuletzt **{rapex_count} offizielle EU Safety Gate (RAPEX) Rückrufmeldungen** gab.
-
-Seit Geltung der **EU-GPSR (VO 2023/988)** stehen Großhändler und Importeure in der direkten Haftung. Zudem sperrt **Amazon** die Listings Ihrer B2B-Händlerkunden sofort, sobald eine EAN oder Charge im Safety Gate gelistet wird.
-
-Mit unserer **ProductSafetyEngine** gleichen Sie Ihr gesamtes Sortiment automatisiert gegen das EU Safety Gate und die US CPSC ab.
-
-**Kostenloser 50-Artikel-Audit für {company}:**
-1. **Direkt per Antwort-Mail:** Senden Sie uns einfach eine CSV/Excel-Liste mit bis zu 50 EANs oder Artikelnamen als Antwort – Sie erhalten innerhalb von 2 Stunden Ihren vollständigen GPSR-Prüfbericht als PDF.
-2. **Self-Service via Apify (API/Cloud):** Testen Sie die Engine direkt selbst mit Ihren Daten: {apify_url}
-
-Beste Grüße
-
-Thomas
-THFC Consulting
-info@thfc-consulting.de
+¿No le interesa? Responda simplemente «No» y no volveré a escribirle.
 """
     else: # English for Poland & international
-        subject = f"EU-GPSR Compliance & Amazon Listing Blocks: Catalog Audit for {company}"
-        body = f"""Hello,
+        subject = f"Safety Gate compliance check for {company}?"
+        body = f"""Dear Sir or Madam,
 
-While reviewing your product range ({cat_text}), we identified **{rapex_count} recent EU Safety Gate (RAPEX) recall alerts** directly affecting your toy categories.
+My name is Thomas Hartmannsgruber from THFC Consulting. I develop specialized software engines for businesses. For your product context, I have built a tool that automatically cross-checks EAN barcodes and product titles against the official EU Safety Gate database.
 
-Under the new **EU GPSR (Regulation 2023/988)**, wholesalers and distributors carry direct liability. Furthermore, marketplaces like **Amazon and Allegro** immediately suspend your B2B resellers' listings when an EAN or batch matches a Safety Gate alert.
+As you may know, the new EU General Product Safety Regulation (GPSR) has been in force since December 2024. Because the EU Safety Gate publishes new recall alerts every week, and toys consistently represent one of the most frequently flagged categories, staying continuously compliant is essential.
 
-Our **ProductSafetyEngine** automates catalog screening against the official EU Safety Gate and US CPSC databases before goods ship.
+To introduce you to the engine, I would be glad to check 50 items from your product range free of charge and without any obligation. A brief reply with your EANs or product titles is all it takes.
 
-**Free 50-SKU Safety Audit for {company}:**
-1. **Zero-Setup Report:** Simply reply to this email with a CSV/Excel file of up to 50 EANs or product titles. We will return your complete PDF compliance report within 2 hours.
-2. **Self-Service (via Apify Cloud/API):** Run the check directly via our engine: {apify_url}
+If you are satisfied with the results, you can continue using the engine flexibly via the internationally renowned SaaS platform Apify:
+{actor_url}
 
 Best regards,
+Thomas Hartmannsgruber
+THFC Consulting · thfc-consulting.de
+Großheppacherstraße 16/1 · 71364 Winnenden, Germany
 
-Thomas
-THFC Consulting
-info@thfc-consulting.de
+Not interested? Simply reply "No" and I will not contact you again.
 """
 
     return {
@@ -259,8 +255,7 @@ info@thfc-consulting.de
         'phone': lead.get('phone', ''),
         'crawled_title': title or '',
         'crawled_desc': desc or '',
-        'detected_focus': cat_text,
-        'rapex_count': rapex_count,
+        'detected_focus': lead.get('category', 'Toys'),
         'subject': subject,
         'body': body
     }

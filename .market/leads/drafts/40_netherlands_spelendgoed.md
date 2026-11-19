@@ -4,29 +4,29 @@
 - **Language:** NL
 - **Website:** http://www.spelendgoed.nl/
 - **Phone:** +31 6 52652122
-- **Detected Focus:** groothandelsassortiment speelgoed, pluche en vrijetijdsartikelen
+- **Detected Focus:** Groothandelaar
 
 ### Subject:
-`EU-GPSR & Bol.com/Amazon-blokkades: Risico-check voor Spelendgoed`
+`Safety Gate controle voor Spelendgoed?`
 
 ### Body:
 ```text
-Goedendag,
+Geachte heer, mevrouw,
 
-Tijdens een analyse van uw online assortiment (groothandelsassortiment speelgoed, pluche en vrijetijdsartikelen) viel ons op dat er in exact deze speelgoedcategorieën recent **34 nieuwe EU Safety Gate (RAPEX) waarschuwingen** zijn gepubliceerd.
+Mijn naam is Thomas Hartmannsgruber van THFC Consulting en ik ontwikkel gerichte software-engines voor bedrijven. Voor uw productassortiment heb ik een tool gebouwd die EAN-codes en productnamen automatisch controleert tegen de officiële EU Safety Gate database.
 
-Onder de nieuwe **EU-GPSR (Verordening 2023/988)** zijn distributeurs en groothandels direct aansprakelijk. Bovendien blokkeren marktplaatsen zoals **Bol.com en Amazon** de accounts van uw B2B-afnemers onmiddellijk zodra één EAN of merk op de RAPEX-lijst verschijnt.
+Zoals u wellicht weet, geldt sinds december 2024 de nieuwe Europese Verordening Algemene Productveiligheid (GPSR). Aangezien het EU Safety Gate wekelijks nieuwe meldingen publiceert en speelgoed regelmatig tot de meest gemelde categorieën behoort, is het vanuit compliance-oogpunt essentieel om actueel te blijven.
 
-Met onze **ProductSafetyEngine** automatiseren wij deze controle direct tegen de Europese Safety Gate en US CPSC databases.
+Om u vrijblijvend kennis te laten maken met de engine, bied ik u aan om eerst 50 artikelen uit uw assortiment kosteloos te controleren. Een kort antwoord op deze mail met uw EAN's of artikelnamen is voldoende.
 
-**Gratis proef-audit (50 artikelen) voor Spelendgoed:**
-1. **Zonder technische setup:** Stuur als antwoord op deze mail een CSV/Excel met maximaal 50 EAN's of productnamen. U ontvangt binnen 2 uur uw volledige GPSR-risicorapport per PDF.
-2. **Direct zelf testen (via Apify API/Cloud):** Start de controle direct zelf via onze engine: https://apify.com/store
+Indien u tevreden bent over het resultaat, kunt u de engine desgewenst flexibel inzetten via het internationaal gerenommeerde SaaS-platform Apify:
+https://apify.com/thfc_labs/eu-product-safety-actor
 
 Met vriendelijke groet,
+Thomas Hartmannsgruber
+THFC Consulting · thfc-consulting.de
+Großheppacherstraße 16/1 · 71364 Winnenden, Duitsland
 
-Thomas
-THFC Consulting
-info@thfc-consulting.de
+Geen interesse? Reageer kort met "Nee" en ik neem geen contact meer met u op.
 
 ```

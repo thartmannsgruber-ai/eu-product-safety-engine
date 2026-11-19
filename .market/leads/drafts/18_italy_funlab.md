@@ -4,29 +4,29 @@
 - **Language:** IT
 - **Website:** http://www.funlab.it/
 - **Phone:** +39 02 8717 8619
-- **Detected Focus:** assortimento di giocattoli, peluche e giochi ricreativi
+- **Detected Focus:** Produttore di giocattoli
 
 ### Subject:
-`Regolamento UE GPSR e blocchi Amazon: Verifica catalogo per FunLab`
+`Verifica Safety Gate per FunLab?`
 
 ### Body:
 ```text
-Buongiorno,
+Gentili signori,
 
-Analizzando il vostro assortimento online (assortimento di giocattoli, peluche e giochi ricreativi), abbiamo riscontrato che nelle vostre categorie di giocattoli sono state emesse di recente **34 segnalazioni ufficiali di richiamo EU Safety Gate (RAPEX)**.
+sono Thomas Hartmannsgruber di THFC Consulting e sviluppo motori software mirati per le aziende. Per il vostro catalogo prodotti ho realizzato uno strumento che confronta automaticamente codici EAN e denominazioni prodotto con il database ufficiale EU Safety Gate.
 
-Con il nuovo regolamento **UE GPSR (2023/988)**, distributori e grossisti rispondono direttamente della conformità. Inoltre, marketplace come **Amazon** bloccano istantaneamente le inserzioni dei vostri clienti B2B se un articolo o lotto compare nei database RAPEX.
+Come forse saprete, da dicembre 2024 è in vigore il nuovo regolamento europeo sulla sicurezza generale dei prodotti (GPSR). Poiché l'EU Safety Gate pubblica nuove segnalazioni ogni settimana e i giocattoli rientrano regolarmente tra le categorie più interessate, è essenziale sotto il profilo della conformità rimanere sempre aggiornati.
 
-Con la nostra **ProductSafetyEngine** automatizziamo lo screening dei cataloghi B2B direttamente sui database ufficiali EU Safety Gate e US CPSC.
+Per farvi conoscere il funzionamento del motore, vi propongo di verificare 50 articoli del vostro assortimento senza alcun impegno e gratuitamente. È sufficiente rispondere a questa e-mail allegando i vostri codici EAN o nomi prodotto.
 
-**Verifica gratuita di 50 articoli per FunLab:**
-1. **Report immediato via e-mail:** Rispondete a questa mail allegando un file CSV/Excel con massimo 50 codici EAN o nomi prodotto. Riceverete il report PDF completo entro 2 ore.
-2. **Test diretto (Apify Cloud/API):** Eseguite la scansione in autonomia tramite la nostra piattaforma: https://apify.com/store
+Se sarete soddisfatti del risultato, potrete in seguito utilizzare il motore in totale autonomia tramite la rinomata piattaforma SaaS internazionale Apify:
+https://apify.com/thfc_labs/eu-product-safety-actor
 
 Cordiali saluti,
+Thomas Hartmannsgruber
+THFC Consulting · thfc-consulting.de
+Großheppacherstraße 16/1 · 71364 Winnenden, Germania
 
-Thomas
-THFC Consulting
-info@thfc-consulting.de
+Non siete interessati? Rispondete semplicemente "No" e non vi ricontatterò più.
 
 ```

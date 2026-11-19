@@ -4,29 +4,29 @@
 - **Language:** DE
 - **Website:** http://www.bhl-restposten.at/
 - **Phone:** 
-- **Detected Focus:** Großhandels-Sortiment an Spielwaren, Plüsch und Freizeitartikeln
+- **Detected Focus:** Großhändler
 
 ### Subject:
-`EU-GPSR & Amazon-Sperren: Kostenloser Katalog-Risikocheck für BHL Business Handel Lackner KG`
+`Safety-Gate-Abgleich für BHL Business Handel Lackner KG?`
 
 ### Body:
 ```text
-Guten Tag,
+Sehr geehrte Damen und Herren,
 
-bei einer Kurzanalyse Ihres Online-Sortiments (Großhandels-Sortiment an Spielwaren, Plüsch und Freizeitartikeln) haben wir festgestellt, dass es in genau diesen Spielwaren-Kategorien zuletzt **34 offizielle EU Safety Gate (RAPEX) Rückrufmeldungen** gab.
+ich bin Thomas Hartmannsgruber von THFC Consulting und entwickle zielgerichtete Software-Engines für Unternehmen. Für Ihren Produkt-Kontext habe ich ein Werkzeug gebaut, das EANs und Produktnamen automatisch gegen das EU Safety Gate abgleicht.
 
-Seit Geltung der **EU-GPSR (VO 2023/988)** stehen Großhändler und Importeure in der direkten Haftung. Zudem sperrt **Amazon** die Listings Ihrer B2B-Händlerkunden sofort, sobald eine EAN oder Charge im Safety Gate gelistet wird.
+Wie Sie sicherlich wissen, gilt seit Dezember 2024 die neue EU-Produktsicherheitsverordnung (GPSR). Da das EU Safety Gate jede Woche neue Meldungen veröffentlicht und Spielzeug regelmäßig zu den am häufigsten betroffenen Kategorien gehört, ist es aus Compliance-Gesichtspunkten essenziell, auf dem aktuellen Stand zu bleiben.
 
-Mit unserer **ProductSafetyEngine** gleichen Sie Ihr gesamtes Sortiment automatisiert gegen das EU Safety Gate und die US CPSC ab.
+Um Ihnen die Engine unverbindlich vorzustellen, biete ich Ihnen an, 50 Artikel aus Ihrem Sortiment zunächst kostenlos zu prüfen. Eine kurze Antwort mit Ihren EANs oder Artikelnamen genügt.
 
-**Kostenloser 50-Artikel-Audit für BHL Business Handel Lackner KG:**
-1. **Direkt per Antwort-Mail:** Senden Sie uns einfach eine CSV/Excel-Liste mit bis zu 50 EANs oder Artikelnamen als Antwort – Sie erhalten innerhalb von 2 Stunden Ihren vollständigen GPSR-Prüfbericht als PDF.
-2. **Self-Service via Apify (API/Cloud):** Testen Sie die Engine direkt selbst mit Ihren Daten: https://apify.com/store
+Wenn Sie mit dem Ergebnis zufrieden sind, können Sie die Engine künftig flexibel über die international renommierte SaaS-Plattform Apify nutzen:
+https://apify.com/thfc_labs/eu-product-safety-actor
 
-Beste Grüße
+Viele Grüße
+Thomas Hartmannsgruber
+THFC Consulting · thfc-consulting.de
+Großheppacherstraße 16/1 · 71364 Winnenden
 
-Thomas
-THFC Consulting
-info@thfc-consulting.de
+Kein Interesse? Antworten Sie einfach kurz mit „Nein“ – dann melde ich mich nicht wieder.
 
 ```

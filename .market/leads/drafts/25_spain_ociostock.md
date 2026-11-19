@@ -4,29 +4,29 @@
 - **Language:** ES
 - **Website:** 
 - **Phone:** 
-- **Detected Focus:** gama de juguetes, peluches y juegos recreativos
+- **Detected Focus:** Mayorista
 
 ### Subject:
-`Normativa UE GPSR y bloqueos en Amazon: Auditoría para OcioStock`
+`Verificación Safety Gate para OcioStock?`
 
 ### Body:
 ```text
-Hola,
+Estimados señores:
 
-Al revisar su catálogo online (gama de juguetes, peluches y juegos recreativos), hemos detectado **34 alertas recientes en el sistema EU Safety Gate (RAPEX)** dentro de sus categorías de juguetes.
+Soy Thomas Hartmannsgruber, de THFC Consulting, y desarrollo motores de software orientados a empresas. Para su catálogo de productos he diseñado una herramienta que coteja automáticamente códigos EAN y nombres de productos con el sistema oficial EU Safety Gate.
 
-Bajo el nuevo reglamento **UE GPSR (2023/988)**, los mayoristas y distribuidores asumen responsabilidad directa. Además, plataformas como **Amazon** suspenden de inmediato los listados de sus clientes B2B cuando un EAN o marca coincide con una alerta RAPEX.
+Como sabrán, desde diciembre de 2024 se aplica el nuevo Reglamento General de Seguridad de los Productos de la UE (GPSR). Dado que el EU Safety Gate publica nuevas alertas cada semana y los juguetes se encuentran habitualmente entre las categorías con mayor número de avisos, resulta esencial desde el punto de vista del cumplimiento normativo mantenerse al día.
 
-Con **ProductSafetyEngine** automatizamos el cruce de su catálogo contra las bases oficiales EU Safety Gate y US CPSC para proteger su cadena de suministro.
+Para que conozcan la herramienta, les ofrezco revisar 50 artículos de su catálogo de forma gratuita y sin compromiso. Basta con responder a este correo indicando sus códigos EAN o nombres de producto.
 
-**Auditoría gratuita de 50 EANs para OcioStock:**
-1. **Vía directa (sin registro):** Responda a este correo con un archivo CSV/Excel de hasta 50 EANs o productos y le enviaremos el informe de riesgos en PDF en menos de 2 horas.
-2. **Acceso directo (Apify Cloud/API):** Ejecute el análisis usted mismo en nuestro motor: https://apify.com/store
+Si quedan satisfechos con el resultado, podrán utilizar el motor cuando lo deseen a través de la reconocida plataforma internacional SaaS Apify:
+https://apify.com/thfc_labs/eu-product-safety-actor
 
-Atentamente,
+Un cordial saludo,
+Thomas Hartmannsgruber
+THFC Consulting · thfc-consulting.de
+Großheppacherstraße 16/1 · 71364 Winnenden, Alemania
 
-Thomas
-THFC Consulting
-info@thfc-consulting.de
+¿No le interesa? Responda simplemente «No» y no volveré a escribirle.
 
 ```
