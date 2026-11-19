@@ -145,7 +145,7 @@ import crypto from 'node:crypto';
  * @returns {boolean} True if signature is authentic and valid
  */
 export function verifyWebhookSignature(rawBody, signatureHeader, secret) {
-  if (!signatureHeader || !signatureHeader.startsWith('sha256=' || !secret)) {
+  if (!signatureHeader || !signatureHeader.startsWith('sha256=') || !secret) {
     return false;
   }
 
