@@ -13,11 +13,12 @@
 ```text
 Dear Sir or Madam,
 
-My name is Thomas Hartmannsgruber from THFC Consulting. I develop specialized software engines for businesses. You can find detailed background information about me and our engines directly on my homepage:
+My name is Thomas Hartmannsgruber from THFC Consulting. As a software developer, I build specialized engines for businesses. You can find detailed background information about me and my engines directly on my homepage:
 https://thfc-consulting.de/labs/product-safety-en
 
 For your company's product range, I have developed an engine that automatically cross-checks EAN barcodes and product titles against the official EU Safety Gate database. As you may know, the new EU General Product Safety Regulation (GPSR) has been in force since December 2024.
 Because the EU Safety Gate publishes new recall alerts every week, and toys consistently represent one of the most frequently flagged categories, staying continuously compliant is essential.
+My personal motivation behind this: as a father of two young daughters, ensuring safe children's toys that strictly comply with EU regulations is something close to my heart.
 
 To introduce you to the engine, I would be glad to check 50 items from your product range free of charge and without any obligation. A brief reply to this email is all it takes.
 

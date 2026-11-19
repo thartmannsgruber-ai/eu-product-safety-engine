@@ -13,11 +13,12 @@
 ```text
 Geachte heer, mevrouw,
 
-Mijn naam is Thomas Hartmannsgruber van THFC Consulting en ik ontwikkel gerichte software-engines voor bedrijven. Achtergrondinformatie over mij en onze ontwikkelde engines vindt u direct op mijn homepage:
+Mijn naam is Thomas Hartmannsgruber van THFC Consulting en ik ontwikkel als software-ontwikkelaar gerichte engines voor bedrijven. Achtergrondinformatie over mij en mijn ontwikkelde engines vindt u direct op mijn homepage:
 https://thfc-consulting.de/labs/product-safety-en
 
 Voor het productassortiment van uw onderneming heb ik een wellicht interessante tool ontwikkeld die EAN-codes en productnamen automatisch controleert tegen de officiële EU Safety Gate database, want zoals u wellicht weet geldt sinds december 2024 de nieuwe Europese Verordening Algemene Productveiligheid (GPSR).
 Aangezien het EU Safety Gate wekelijks nieuwe meldingen publiceert en speelgoed regelmatig tot de meest gemelde categorieën behoort, is het vanuit compliance-oogpunt essentieel om actueel te blijven.
+Mijn persoonlijke motivatie hierachter: als vader van twee jonge dochters hecht ik veel waarde aan veilig kinderspeelgoed dat volledig voldoet aan de Europese normen.
 
 Om vrijblijvend kennis te maken met de engine, bied ik u aan om eerst 50 artikelen uit uw assortiment kosteloos door de engine te laten controleren. Een kort antwoord is voldoende.
 

@@ -13,11 +13,12 @@
 ```text
 Estimados señores:
 
-Soy Thomas Hartmannsgruber, de THFC Consulting, y desarrollo motores de software orientados a empresas. Puede consultar información detallada sobre mi trayectoria y sobre nuestros motores directamente en mi página web:
+Soy Thomas Hartmannsgruber, de THFC Consulting, y como desarrollador de software creo motores específicos para empresas. Puede consultar información detallada sobre mi trayectoria y sobre mis motores directamente en mi página web:
 https://thfc-consulting.de/labs/product-safety-en
 
 Para la gama de productos de su empresa he desarrollado una herramienta de posible interés que coteja automáticamente códigos EAN y nombres de productos con el sistema oficial EU Safety Gate, ya que, como sabrán, desde diciembre de 2024 se aplica el nuevo Reglamento General de Seguridad de los Productos de la UE (GPSR).
 Dado que el EU Safety Gate publica nuevas alertas cada semana y los juguetes se encuentran habitualmente entre las categorías con mayor número de avisos, resulta esencial desde el punto de vista del cumplimiento normativo mantenerse al día.
+Mi motivación personal: como padre de dos niñas pequeñas, me importa profundamente la seguridad de los juguetes infantiles y su estricto cumplimiento de las exigencias europeas.
 
 Para conocer el funcionamiento del motor, les ofrezco revisar 50 artículos de su catálogo de forma gratuita y sin compromiso mediante el propio motor. Basta con una breve respuesta.
 
