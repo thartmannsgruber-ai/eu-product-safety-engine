@@ -12,3 +12,5 @@ dist/
 .env
 .market/leads/sent_log.json
 .crm/
+__pycache__/
+*.pyc
