@@ -8,6 +8,24 @@
       "title": "Overview",
       "description": "Dataset view containing verified EU Safety Gate recall alerts",
       "template": "{{links.apiDefaultDatasetUrl}}/items?view=overview"
+    },
+    "batchReport": {
+      "type": "string",
+      "title": "Batch Screening Report",
+      "description": "Key-value store record with statistics on bulk CSV screening (processed rows, duplicate counts, resolved identifiers)",
+      "template": "{{links.apiDefaultKeyValueStoreUrl}}/records/BATCH_REPORT"
+    },
+    "runSummary": {
+      "type": "string",
+      "title": "Run Summary",
+      "description": "Key-value store record summarizing recall matches, unresolved identifiers, and execution metrics",
+      "template": "{{links.apiDefaultKeyValueStoreUrl}}/records/RUN_SUMMARY"
+    },
+    "webhookLog": {
+      "type": "string",
+      "title": "Webhook Dispatch Log",
+      "description": "Key-value store record detailing webhook notification delivery status and payload signatures",
+      "template": "{{links.apiDefaultKeyValueStoreUrl}}/records/WEBHOOK_LOG"
     }
   }
 }

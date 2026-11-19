@@ -18,6 +18,9 @@
 5. [Schnellstart & Lokales Setup](#schnellstart--lokales-setup)
 6. [MCP Server Konfiguration](#mcp-server-konfiguration)
 7. [Apify Actor & Pay-Per-Event (PPE)](#apify-actor--pay-per-event-ppe)
+   - [Check Amazon ASINs & product URLs](#check-amazon-asins--product-urls)
+   - [Bulk CSV screening (up to 10,000 SKUs)](#bulk-csv-screening-up-to-10000-skus)
+   - [Webhook alerts (Slack, Discord, Make, Zapier, ERP)](#webhook-alerts-slack-discord-make-zapier-erp)
 8. [Testing & Qualitätssicherung](#testing--qualitätssicherung)
 9. [Compliance & Rechtliches](#compliance--rechtliches)
 
@@ -200,11 +203,132 @@ Der Actor in `apps/actor` ist für den Apify Store optimiert und bietet ein hoch
 Abrechnung erfolgt verbrauchsgenau pro Event:
 - **Einstiegspreismodell:** **$1.90 / 1.000 Results** ($0.0019 pro Resultat)
 - `ean-checked`: **$0.005** pro geprüfter EAN
-- `alert-returned`: **$0.010** pro zurückgegebenem Alert
+- `alert-returned`: **$0.0019** pro zurückgegebenem Alert ($1.90 / 1.000 Results)
 - `query-executed`: **$0.002** pro Suchanfrage
 - `weekly-monitored`: **$0.020** pro Wochenbericht
+- **Webhooks & Bulk CSV Ingestion:** **Kostenlos ($0.00)** – keine zusätzlichen Abrechnungsevents
 
 Details siehe [PRICING.md](PRICING.md).
+
+### Check Amazon ASINs & product URLs
+
+Überprüfung von Amazon ASINs und Produkt-Detailseiten-URLs gegen offizielle EU Safety Gate Rückrufe und GPSR-Mängel.
+
+**JSON-Beispiel-Input:**
+```json
+{
+  "asins": [
+    "0306406152",
+    "B08N5WRWNW"
+  ],
+  "amazonUrls": [
+    "https://www.amazon.de/dp/0306406152",
+    "https://www.amazon.co.uk/Motorcycle-Helmet-Bluetooth/dp/B08H93ZRK9"
+  ],
+  "childProductsOnly": false,
+  "maxItems": 50
+}
+```
+
+Die Auflösung erfolgt über drei konforme Mechanismen:
+1. **ISBN-10 zu EAN-13 Konvertierung:** Mathematische Prüfziffernberechnung für Buch-ASINs (`resolution_method: "isbn10_conversion"`).
+2. **Katalog-Mapping:** Zuordnung über mitgelieferte ASIN/EAN-Paare aus Bulk-CSV-Dateien (`resolution_method: "csv_mapping"`).
+3. **URL-Slug-Keywords:** Extraktion von Produkttiteln aus Amazon-URLs für Volltextsuchen im Safety-Gate-Index (`resolution_method: "url_slug_keywords"`, gekennzeichnet mit `match_confidence: "keyword"`).
+
+> [!NOTE]
+> **Ehrlicher Hinweis zu den Grenzen der ASIN-Auflösung (Zero Scraping):**  
+> ProductSafetyEngine agiert strikt datenschutz- und plattformkonform und betreibt **kein Scraping** von Amazon-Webseiten oder das Umgehen von Bot-Schutzmaßnahmen. Nicht auflösbare B0-ASINs (ohne ISBN-10-Muster, ohne CSV-Katalog-EAN und ohne sprechende URL-Slugs) werden im `RUN_SUMMARY` und `BATCH_REPORT` als nicht aufgelöst (`unresolved`) transparent ausgewiesen. Für nicht auflösbare Kennungen fallen **keine PPE-Kosten ($0.00)** an.
+
+---
+
+### Bulk CSV screening (up to 10,000 SKUs)
+
+Automatisiertes Screening ganzer Lieferanten- und Marktplatzkataloge mit bis zu **10.000 SKUs** oder **5 MB** Dateigröße pro Run.
+
+**CSV-Beispiel (`apps/actor/.actor/examples/bulk-sample.csv`):**
+```csv
+sku,ean,asin,name,url
+SKU-1001,5054298241091,,Wooden Building Blocks,https://www.amazon.de/dp/B08N5WRWNW
+SKU-1002,4006381333931,,Magnetic Drawing Board,
+SKU-1003,,0306406152,Science Experiment Manual,https://www.amazon.co.uk/dp/0306406152
+SKU-1004,4099979071513,B08H93ZRK9,Baby Teething Ring,https://www.amazon.de/Baby-Teething-Ring/dp/B08H93ZRK9
+SKU-1005,5901234123457,,Plush Animal Toy,
+```
+
+**JSON-Beispiel-Input (Remote URL oder Direkt-Inhalt):**
+```json
+{
+  "csvUrl": "https://example.com/catalogs/inventory_2026.csv",
+  "childProductsOnly": false,
+  "maxItems": 50,
+  "webhookUrl": "https://api.yourdomain.com/webhooks/safety-alerts",
+  "webhookFormat": "generic"
+}
+```
+
+*Highlights:*
+- Automatische Erkennung gängiger Header (`sku`, `ean`, `asin`, `url`, `name`) und Trennzeichen (`,`, `;`, `\t`).
+- Direkte Unterstützung von Google-Sheets-Freigabelinks (automatische Konvertierung nach `/export?format=csv`).
+- Duplikaterkennung: Mehrfach vorkommende EANs werden dedupliziert und nur ein einziges Mal abgerechnet.
+- SSRF-Schutz: Remote-URLs werden auf HTTPS validiert und private IP-Bereiche, Localhost sowie Cloud-Metadaten-Endpunkte blockiert.
+
+---
+
+### Webhook alerts (Slack, Discord, Make, Zapier, ERP)
+
+Echtzeit-Push-Benachrichtigungen bei Gefahren- und Produktrückruftreffern für automatisierte Workflows in Slack, Discord, Make, Zapier oder In-House-ERP-Systemen.
+
+**JSON-Beispiel-Input:**
+```json
+{
+  "eans": ["5054298241091", "4006381333931"],
+  "webhookUrl": "https://api.yourdomain.com/webhooks/safety-alerts",
+  "webhookFormat": "generic",
+  "webhookSecret": "whsec_live_9a8b7c6d5e4f3a2b1c0d",
+  "webhookOnlyOnMatch": true
+}
+```
+
+Unterstützte Formate:
+- `generic`: Vollständiges JSON-Schema `pse.alert.v1` mit Trefferdetails und EU-Safety-Gate-Referenzen.
+- `slack`: Fertig gerenderte Slack Block-Kit-Payloads (max. 50 Blöcke).
+- `discord`: Reichhaltige Embed-Karten für Discord-Webhooks (max. 10 Embeds).
+
+**Signaturprüfung (Node.js Snippet):**
+Zur Verifikation der Echtheit wird der Header `X-Hub-Signature-256` mit HMAC-SHA256 validiert:
+
+```javascript
+import crypto from 'node:crypto';
+
+/**
+ * Signaturprüfung für eingehende ProductSafetyEngine Webhooks
+ * @param {string} rawBody - Ungeparster Roh-Request-Body als String
+ * @param {string} signatureHeader - Wert des Headers 'X-Hub-Signature-256'
+ * @param {string} secret - Konfiguriertes Webhook-Secret
+ * @returns {boolean} True wenn die Signatur valide und authentisch ist
+ */
+export function verifyWebhookSignature(rawBody, signatureHeader, secret) {
+  if (!signatureHeader || !signatureHeader.startsWith('sha256=') || !secret) {
+    return false;
+  }
+
+  const expectedSignature = 'sha256=' + crypto
+    .createHmac('sha256', secret)
+    .update(rawBody, 'utf-8')
+    .digest('hex');
+
+  const signatureBuffer = Buffer.from(signatureHeader, 'utf-8');
+  const expectedBuffer = Buffer.from(expectedSignature, 'utf-8');
+
+  if (signatureBuffer.length !== expectedBuffer.length) {
+    return false;
+  }
+
+  return crypto.timingSafeEqual(signatureBuffer, expectedBuffer);
+}
+```
+
+*Kostenhinweis:* Webhooks und CSV-Parsing sind **100 % kostenlos ($0.00)**. Es fallen keine zusätzlichen Abrechnungsevents an.
 
 ---
 

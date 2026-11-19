@@ -24,6 +24,15 @@ The official event definitions and standard unit prices (in USD) are strictly al
 | **`query-executed`** | Full-text, category, or parameter-based search query across indexed RAPEX records. | **$0.002** | ~€0.0018 | Per executed search query |
 | **`weekly-monitored`** | Systematic batch retrieval of an entire calendar week's official EU Safety Gate publications. | **$0.020** | ~€0.0185 | Per weekly batch fetched |
 
+### 1.1 No New Events for Advanced Features & Free Webhooks
+
+To keep compliance costs fully transparent and predictable, **no new billing events are added** for Amazon ASIN screening, bulk CSV imports, or real-time Webhook alerts:
+
+- **Free Webhook Notifications ($0.00 / Free):** Webhook alerts to Slack, Discord, Make, Zapier, or custom ERP systems are completely free of charge. No event fee is charged for webhook payload generation, HMAC signing, or HTTP delivery.
+- **Bulk CSV Screening (Free Ingestion):** Parsing, validating, and mapping catalog CSV files (up to 10,000 SKUs) is free. Only deduplicated, valid barcodes trigger the standard `ean-checked` event once.
+- **Amazon ASIN & Product URL Screening:** Resolving Amazon identifiers uses standard primitives. Converted ISBN-10 ASINs or catalog-mapped EANs trigger `ean-checked` ($0.005). URL title keywords trigger standard `query-executed` ($0.002). Unresolvable identifiers incur **$0.00** (no charge).
+- **Unchanged Core PPE Events:** The 4 official Pay-Per-Event names (`ean-checked`, `alert-returned`, `query-executed`, `weekly-monitored`) defined in `apps/actor/src/ppe.ts` and in this table remain strictly preserved, unchanged, and exhaustive.
+
 ---
 
 ## 2. Realistic Usage Scenarios & Cost Estimations

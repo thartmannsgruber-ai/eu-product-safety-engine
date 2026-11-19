@@ -126,7 +126,9 @@
           "category",
           "risk_type",
           "danger_description",
-          "is_child_related"
+          "is_child_related",
+          "input_identifier",
+          "sku"
         ]
       },
       "display": {
@@ -137,7 +139,9 @@
           "brand": { "label": "Brand" },
           "category": { "label": "Category" },
           "risk_type": { "label": "Risk Type" },
-          "is_child_related": { "label": "Child Related" }
+          "is_child_related": { "label": "Child Related" },
+          "input_identifier": { "label": "Input Identifier" },
+          "sku": { "label": "SKU" }
         }
       }
     }
