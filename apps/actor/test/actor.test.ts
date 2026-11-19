@@ -700,4 +700,158 @@ describe('F07: Apify Actor Struktur & Konfiguration', () => {
       expect(chemicalResult.items.length).toBeGreaterThan(0);
     });
   });
+
+  describe('F07: Actor Input-Schema erweitern (Zod + input_schema.json)', () => {
+    const inputSchemaPath = path.join(ACTOR_DIR, '.actor/input_schema.json');
+
+    it('Akzeptanzkriterium 1: input_schema.json ist valides JSON, webhookSecret hat isSecret: true', () => {
+      expect(fs.existsSync(inputSchemaPath)).toBe(true);
+      const raw = fs.readFileSync(inputSchemaPath, 'utf-8');
+
+      let schema: any;
+      expect(() => {
+        schema = JSON.parse(raw);
+      }).not.toThrow();
+
+      expect(schema.schemaVersion).toBe(1);
+      expect(schema.type).toBe('object');
+      expect(schema.properties).toBeTypeOf('object');
+
+      // webhookSecret hat isSecret: true
+      const secretProp = schema.properties.webhookSecret;
+      expect(secretProp).toBeDefined();
+      expect(secretProp.type).toBe('string');
+      expect(secretProp.isSecret).toBe(true);
+      expect(secretProp.editor).toBe('textfield');
+
+      // Gruppierung über sectionCaption im Schema: 'Amazon', 'Bulk CSV', 'Webhook'
+      expect(schema.properties.asins.sectionCaption).toBe('Amazon');
+      expect(schema.properties.csvUrl.sectionCaption).toBe('Bulk CSV');
+      expect(schema.properties.webhookUrl.sectionCaption).toBe('Webhook');
+
+      // Weitere Feld-Spezifikationen
+      expect(schema.properties.csvContent.editor).toBe('textarea');
+      expect(schema.properties.webhookFormat.editor).toBe('select');
+      expect(schema.properties.webhookFormat.default).toBe('generic');
+      expect(schema.properties.webhookFormat.enum).toEqual(['generic', 'slack', 'discord']);
+      expect(schema.properties.webhookOnlyOnMatch.editor).toBe('checkbox');
+      expect(schema.properties.webhookOnlyOnMatch.default).toBe(true);
+      expect(schema.properties.asins.maxItems).toBe(1000);
+      expect(schema.properties.amazonUrls.maxItems).toBe(1000);
+
+      // Englische Beschreibungen mit Beispielen (Store-SEO)
+      expect(schema.properties.asins.description).toMatch(/B08N5WRWNW|e\.g\./i);
+      expect(schema.properties.amazonUrls.description).toMatch(/amazon|e\.g\./i);
+      expect(schema.properties.csvUrl.description).toMatch(/https|e\.g\./i);
+      expect(schema.properties.csvContent.description).toMatch(/CSV|MB/i);
+      expect(schema.properties.webhookUrl.description).toMatch(/https|e\.g\./i);
+      expect(schema.properties.webhookSecret.description).toMatch(/HMAC|e\.g\./i);
+    });
+
+    it('Akzeptanzkriterium 2: Zod lehnt csvUrl und webhookUrl mit http:// ab', () => {
+      // csvUrl mit http:// wird abgelehnt
+      expect(() =>
+        ActorInputSchema.parse({ csvUrl: 'http://example.com/products.csv' })
+      ).toThrow();
+
+      // csvUrl mit https:// wird akzeptiert
+      const validCsv = ActorInputSchema.parse({
+        csvUrl: 'https://example.com/products.csv',
+      });
+      expect(validCsv.csvUrl).toBe('https://example.com/products.csv');
+
+      // webhookUrl mit http:// wird abgelehnt
+      expect(() =>
+        ActorInputSchema.parse({ webhookUrl: 'http://hooks.slack.com/services/T00/B00/XXXX' })
+      ).toThrow();
+
+      // webhookUrl mit https:// wird akzeptiert
+      const validWebhook = ActorInputSchema.parse({
+        webhookUrl: 'https://hooks.slack.com/services/T00/B00/XXXX',
+      });
+      expect(validWebhook.webhookUrl).toBe('https://hooks.slack.com/services/T00/B00/XXXX');
+
+      // Ungültige Protokolle werden ebenfalls abgelehnt
+      expect(() => ActorInputSchema.parse({ csvUrl: 'ftp://example.com/data.csv' })).toThrow();
+      expect(() => ActorInputSchema.parse({ webhookUrl: 'javascript:alert(1)' })).toThrow();
+    });
+
+    it('Akzeptanzkriterium 3: Die Feldnamen in Zod und JSON-Schema sind identisch (Test)', () => {
+      const schema = JSON.parse(fs.readFileSync(inputSchemaPath, 'utf-8'));
+      const jsonFields = Object.keys(schema.properties).sort();
+
+      // 1. Zod Shape-Keys aus ActorInputSchema
+      const zodShapeKeys = Object.keys(ActorInputSchema.shape).sort();
+      expect(zodShapeKeys).toEqual(jsonFields);
+
+      // 2. Keys des geparsten Default-Ergebnisobjekts
+      const defaultParsed = ActorInputSchema.parse({});
+      const parsedKeys = Object.keys(defaultParsed).sort();
+      expect(parsedKeys).toEqual(jsonFields);
+
+      // Sicherstellen, dass genau 18 Felder definiert sind
+      expect(jsonFields).toHaveLength(18);
+      expect(zodShapeKeys).toHaveLength(18);
+    });
+
+    it('Akzeptanzkriterium 4: Alle bestehenden Actor-Tests bleiben grün und alte Inputs parsen unverändert', () => {
+      const parsed = ActorInputSchema.parse({
+        ean: '5054298241091',
+        category: 'Toys',
+        query: 'wooden puzzle',
+        week: '2026-W45',
+        maxItems: 30,
+      });
+
+      expect(parsed.ean).toBe('5054298241091');
+      expect(parsed.category).toBe('Toys');
+      expect(parsed.query).toBe('wooden puzzle');
+      expect(parsed.week).toBe('2026-W45');
+      expect(parsed.maxItems).toBe(30);
+      expect(parsed.webhookFormat).toBe('generic');
+      expect(parsed.webhookOnlyOnMatch).toBe(true);
+
+      // Aliase parsen wie gewohnt
+      const aliasParsed = ActorInputSchema.parse({
+        suchbegriff: 'Puppenwagen',
+        woche: '45',
+      });
+      expect(aliasParsed.query).toBe('Puppenwagen');
+      expect(aliasParsed.week).toBe('45');
+    });
+
+    it('Validiert Limits für asins, amazonUrls und csvContent', () => {
+      // asins Limit: max 1.000
+      const overAsins = Array.from({ length: 1001 }, (_, i) => `B${String(i).padStart(9, '0')}`);
+      expect(() => ActorInputSchema.parse({ asins: overAsins })).toThrow();
+
+      const okAsins = Array.from({ length: 1000 }, (_, i) => `B${String(i).padStart(9, '0')}`);
+      expect(() => ActorInputSchema.parse({ asins: okAsins })).not.toThrow();
+
+      // amazonUrls Limit: max 1.000
+      const overUrls = Array.from({ length: 1001 }, (_, i) => `https://amazon.de/dp/B${String(i).padStart(9, '0')}`);
+      expect(() => ActorInputSchema.parse({ amazonUrls: overUrls })).toThrow();
+
+      const okUrls = Array.from({ length: 1000 }, (_, i) => `https://amazon.de/dp/B${String(i).padStart(9, '0')}`);
+      expect(() => ActorInputSchema.parse({ amazonUrls: okUrls })).not.toThrow();
+
+      // csvContent Limit: max 5 MB (5 * 1024 * 1024)
+      const overCsv = 'X'.repeat(5 * 1024 * 1024 + 1);
+      expect(() => ActorInputSchema.parse({ csvContent: overCsv })).toThrow();
+
+      const validCsv = 'ean,asin,sku\n5054298241091,B08N5WRWNW,SKU-1';
+      const parsedCsv = ActorInputSchema.parse({ csvContent: validCsv });
+      expect(parsedCsv.csvContent).toBe(validCsv);
+
+      // webhookFormat Enum-Validierung
+      expect(() => ActorInputSchema.parse({ webhookFormat: 'unsupported' as any })).toThrow();
+      expect(ActorInputSchema.parse({ webhookFormat: 'slack' }).webhookFormat).toBe('slack');
+      expect(ActorInputSchema.parse({ webhookFormat: 'discord' }).webhookFormat).toBe('discord');
+
+      // webhookOnlyOnMatch boolean
+      expect(ActorInputSchema.parse({ webhookOnlyOnMatch: false }).webhookOnlyOnMatch).toBe(false);
+      expect(ActorInputSchema.parse({ webhookOnlyOnMatch: 'false' as any }).webhookOnlyOnMatch).toBe(false);
+      expect(ActorInputSchema.parse({ webhookOnlyOnMatch: true }).webhookOnlyOnMatch).toBe(true);
+    });
+  });
 });

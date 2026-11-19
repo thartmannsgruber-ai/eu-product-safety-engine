@@ -25,6 +25,135 @@ import {
 } from './ppe.js';
 
 /**
+ * Helper to normalize strings for alias resolution (empty string -> undefined).
+ */
+function normalizeString(val: unknown): string | undefined {
+  if (typeof val === 'string') {
+    const trimmed = val.trim();
+    return trimmed.length > 0 ? trimmed : undefined;
+  }
+  return undefined;
+}
+
+/**
+ * Validates HTTPS outbound URLs, rejecting non-https schemes (e.g. http://).
+ */
+const httpsUrlSchema = z
+  .string()
+  .trim()
+  .optional()
+  .transform((val) => (val && val.length > 0 ? val : undefined))
+  .pipe(
+    z
+      .string()
+      .refine(
+        (val) => {
+          try {
+            const parsed = new URL(val);
+            return parsed.protocol === 'https:';
+          } catch {
+            return false;
+          }
+        },
+        { message: 'URL must use HTTPS protocol' }
+      )
+      .optional()
+  );
+
+/**
+ * Validates string array or multiline text up to 1,000 items.
+ */
+const arrayStringMax1000 = z
+  .preprocess((val) => {
+    if (typeof val === 'string') {
+      const parts = val
+        .split(/[\r\n,]+/)
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0);
+      return parts.length > 0 ? parts : undefined;
+    }
+    if (Array.isArray(val)) {
+      const parts = val
+        .map((s) => (typeof s === 'string' ? s.trim() : s))
+        .filter((s) => typeof s === 'string' && s.length > 0);
+      return parts.length > 0 ? parts : undefined;
+    }
+    return val;
+  }, z.array(z.string()).max(1000, 'Maximum 1,000 items allowed').optional());
+
+/**
+ * Underlying Zod Object schema representing the canonical ActorInput structure
+ * matching .actor/input_schema.json properties.
+ */
+export const ActorInputObjectSchema = z.object({
+  ean: z
+    .string()
+    .trim()
+    .optional()
+    .transform((val) => (val && val.length > 0 ? val : undefined)),
+  eans: z
+    .preprocess((val) => {
+      if (typeof val === 'string') {
+        const parts = val
+          .split(/[\r\n,]+/)
+          .map((s) => s.trim())
+          .filter((s) => s.length > 0);
+        return parts.length > 0 ? parts : undefined;
+      }
+      if (Array.isArray(val)) {
+        const parts = val
+          .map((s) => (typeof s === 'string' ? s.trim() : s))
+          .filter((s) => typeof s === 'string' && s.length > 0);
+        return parts.length > 0 ? parts : undefined;
+      }
+      return val;
+    }, z.array(z.string()).optional()),
+  category: z
+    .string()
+    .trim()
+    .optional()
+    .transform((val) => (val && val.length > 0 ? val : undefined)),
+  query: z
+    .string()
+    .trim()
+    .optional()
+    .transform((val) => (val && val.length > 0 ? val : undefined)),
+  week: z
+    .string()
+    .trim()
+    .optional()
+    .transform((val) => (val && val.length > 0 ? val : undefined)),
+  childProductsOnly: z.coerce.boolean().optional(),
+  ageGroup: z.enum(['baby', 'toddler', 'child', 'unknown']).optional(),
+  hazard: z.enum(['choking', 'chemical', 'magnets']).optional(),
+  refreshData: z.coerce.boolean().optional(),
+  maxItems: z.coerce.number().int().positive().default(20).transform((val) => Math.min(val, 50)),
+  asins: arrayStringMax1000,
+  amazonUrls: arrayStringMax1000,
+  csvUrl: httpsUrlSchema,
+  csvContent: z
+    .string()
+    .max(5 * 1024 * 1024, 'csvContent must not exceed 5 MB')
+    .optional()
+    .transform((val) => (val && val.trim().length > 0 ? val : undefined)),
+  webhookUrl: httpsUrlSchema,
+  webhookFormat: z.enum(['generic', 'slack', 'discord']).default('generic'),
+  webhookSecret: z
+    .string()
+    .trim()
+    .optional()
+    .transform((val) => (val && val.length > 0 ? val : undefined)),
+  webhookOnlyOnMatch: z.preprocess((val) => {
+    if (val === undefined || val === null) return undefined;
+    if (typeof val === 'string') {
+      if (val === 'false' || val === '0') return false;
+      if (val === 'true' || val === '1') return true;
+    }
+    return Boolean(val);
+  }, z.boolean().default(true)),
+});
+
+/**
  * Zod-Schema fuer Actor-Inputs mit Filtern gemaess .actor/input_schema.json:
  * - ean: EAN-8, EAN-13, UPC oder GTIN Barcode
  * - eans: Array oder mehrzeiliger Text von Barcodes fuer Batch-Screening
@@ -32,13 +161,23 @@ import {
  * - query: Freitext-Suchbegriff (mit Aliassen searchTerm & suchbegriff)
  * - week: Publikationswoche (z.B. '2026-W45', '2026-45' oder '45')
  * - maxItems: Maximale Anzahl Datensaetze (Default 20, max. 50 gedrosselt gegen Scraping)
+ * - asins: Array von Amazon ASINs (max. 1.000)
+ * - amazonUrls: Array von Amazon Product URLs (max. 1.000)
+ * - csvUrl: Remote CSV Download-URL (HTTPS-only)
+ * - csvContent: Direkter CSV Textinhalt (max. 5 MB)
+ * - webhookUrl: Webhook Ziel-URL (HTTPS-only)
+ * - webhookFormat: generic | slack | discord (Default: generic)
+ * - webhookSecret: HMAC SHA256 Secret
+ * - webhookOnlyOnMatch: Boolean (Default: true)
  */
-export const ActorInputSchema = z
+const baseActorInputSchema = z
   .preprocess((raw) => {
     if (Array.isArray(raw)) {
       if (raw.length === 0) return {};
       if (raw.length === 1) return raw[0];
       const allEans: string[] = [];
+      const allAsins: string[] = [];
+      const allAmazonUrls: string[] = [];
       let base: Record<string, unknown> = {};
       for (const item of raw) {
         if (item && typeof item === 'object') {
@@ -61,79 +200,96 @@ export const ActorInputSchema = z
               );
             }
           }
+          if ('asin' in item && typeof (item as any).asin === 'string' && (item as any).asin.trim()) {
+            allAsins.push((item as any).asin.trim());
+          }
+          if ('asins' in item) {
+            const itemAsins = (item as any).asins;
+            if (Array.isArray(itemAsins)) {
+              for (const a of itemAsins) {
+                if (typeof a === 'string' && a.trim()) allAsins.push(a.trim());
+              }
+            } else if (typeof itemAsins === 'string' && itemAsins.trim()) {
+              allAsins.push(
+                ...itemAsins
+                  .split(/[\r\n,]+/)
+                  .map((s: string) => s.trim())
+                  .filter(Boolean)
+              );
+            }
+          }
+          if ('amazonUrls' in item) {
+            const itemUrls = (item as any).amazonUrls;
+            if (Array.isArray(itemUrls)) {
+              for (const u of itemUrls) {
+                if (typeof u === 'string' && u.trim()) allAmazonUrls.push(u.trim());
+              }
+            } else if (typeof itemUrls === 'string' && itemUrls.trim()) {
+              allAmazonUrls.push(
+                ...itemUrls
+                  .split(/[\r\n,]+/)
+                  .map((s: string) => s.trim())
+                  .filter(Boolean)
+              );
+            }
+          }
         }
       }
       delete (base as Record<string, unknown>).ean;
+      delete (base as Record<string, unknown>).asin;
+      const query =
+        normalizeString(base.query) ??
+        normalizeString(base.searchTerm) ??
+        normalizeString(base.suchbegriff);
+      const week = normalizeString(base.week) ?? normalizeString(base.woche);
       return {
         ...base,
+        ...(query !== undefined ? { query } : {}),
+        ...(week !== undefined ? { week } : {}),
         eans: allEans.length > 0 ? allEans : undefined,
+        asins: allAsins.length > 0 ? allAsins : undefined,
+        amazonUrls: allAmazonUrls.length > 0 ? allAmazonUrls : undefined,
+      };
+    }
+    if (raw && typeof raw === 'object') {
+      const r = raw as Record<string, unknown>;
+      const query =
+        normalizeString(r.query) ??
+        normalizeString(r.searchTerm) ??
+        normalizeString(r.suchbegriff);
+      const week = normalizeString(r.week) ?? normalizeString(r.woche);
+      return {
+        ...r,
+        ...(query !== undefined ? { query } : {}),
+        ...(week !== undefined ? { week } : {}),
       };
     }
     return raw;
-  }, z.object({
-    ean: z
-      .string()
-      .trim()
-      .optional()
-      .transform((val) => (val && val.length > 0 ? val : undefined)),
-    eans: z
-      .preprocess((val) => {
-        if (typeof val === 'string') {
-          const parts = val
-            .split(/[\r\n,]+/)
-            .map((s) => s.trim())
-            .filter((s) => s.length > 0);
-          return parts.length > 0 ? parts : undefined;
-        }
-        if (Array.isArray(val)) {
-          const parts = val
-            .map((s) => (typeof s === 'string' ? s.trim() : s))
-            .filter((s) => typeof s === 'string' && s.length > 0);
-          return parts.length > 0 ? parts : undefined;
-        }
-        return val;
-      }, z.array(z.string()).optional()),
-    category: z
-      .string()
-      .trim()
-      .optional()
-      .transform((val) => (val && val.length > 0 ? val : undefined)),
-    query: z
-      .string()
-      .trim()
-      .optional()
-      .transform((val) => (val && val.length > 0 ? val : undefined)),
-    searchTerm: z.string().trim().optional(),
-    suchbegriff: z.string().trim().optional(),
-    week: z
-      .string()
-      .trim()
-      .optional()
-      .transform((val) => (val && val.length > 0 ? val : undefined)),
-    woche: z.string().trim().optional(),
-    childProductsOnly: z.coerce.boolean().optional(),
-    ageGroup: z.enum(['baby', 'toddler', 'child', 'unknown']).optional(),
-    hazard: z.enum(['choking', 'chemical', 'magnets']).optional(),
-    refreshData: z.coerce.boolean().optional(),
-    maxItems: z.coerce.number().int().positive().default(20).transform((val) => Math.min(val, 50)),
-  }))
-  .transform((data) => {
-    // Alias-Handling
-    const query = data.query ?? data.searchTerm ?? data.suchbegriff;
-    const week = data.week ?? data.woche;
-    return {
-      ean: data.ean,
-      eans: data.eans,
-      category: data.category,
-      query,
-      week,
-      childProductsOnly: data.childProductsOnly,
-      ageGroup: data.ageGroup,
-      hazard: data.hazard,
-      refreshData: data.refreshData,
-      maxItems: data.maxItems,
-    };
-  });
+  }, ActorInputObjectSchema)
+  .transform((data) => ({
+    ean: data.ean,
+    eans: data.eans,
+    category: data.category,
+    query: data.query,
+    week: data.week,
+    childProductsOnly: data.childProductsOnly,
+    ageGroup: data.ageGroup,
+    hazard: data.hazard,
+    refreshData: data.refreshData,
+    maxItems: data.maxItems,
+    asins: data.asins,
+    amazonUrls: data.amazonUrls,
+    csvUrl: data.csvUrl,
+    csvContent: data.csvContent,
+    webhookUrl: data.webhookUrl,
+    webhookFormat: data.webhookFormat,
+    webhookSecret: data.webhookSecret,
+    webhookOnlyOnMatch: data.webhookOnlyOnMatch,
+  }));
+
+export const ActorInputSchema = Object.assign(baseActorInputSchema, {
+  shape: ActorInputObjectSchema.shape,
+});
 
 export type ActorInput = z.infer<typeof ActorInputSchema>;
 

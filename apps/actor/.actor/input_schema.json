@@ -6,13 +6,13 @@
     "ean": {
       "title": "EAN / Barcode",
       "type": "string",
-      "description": "EAN-8, EAN-13, UPC or GTIN barcode to verify against EU Safety Gate recalls (e.g. 5054298241091).",
+      "description": "EAN-8, EAN-13, UPC or GTIN barcode to verify against EU Safety Gate recalls (e.g. '5054298241091').",
       "editor": "textfield"
     },
     "eans": {
       "title": "Batch EANs / Barcodes",
       "type": "array",
-      "description": "Array of EAN-8, EAN-13, UPC or GTIN barcodes for batch screening of e-commerce catalogs.",
+      "description": "Array of EAN-8, EAN-13, UPC or GTIN barcodes for batch screening of e-commerce catalogs (e.g. ['5054298241091', '4099979071513']).",
       "editor": "stringList",
       "items": {
         "type": "string"
@@ -21,13 +21,13 @@
     "category": {
       "title": "Category / Kategorie",
       "type": "string",
-      "description": "Product category to filter alerts (e.g. Toys, Cosmetics, Electrical appliances, Motor vehicles).",
+      "description": "Product category to filter alerts (e.g. 'Toys', 'Cosmetics', 'Electrical appliances', 'Motor vehicles').",
       "editor": "textfield"
     },
     "query": {
       "title": "Search Query / Suchbegriff",
       "type": "string",
-      "description": "Free text search term to search across product names, brands, models, and danger descriptions.",
+      "description": "Free text search term to search across product names, brands, models, and danger descriptions (e.g. 'wooden puzzle').",
       "editor": "textfield"
     },
     "week": {
@@ -46,7 +46,7 @@
     "ageGroup": {
       "title": "Child Age Group",
       "type": "string",
-      "description": "Filter by target age group: 'baby' (0-12m), 'toddler' (1-3y), 'child' (toys/general kids).",
+      "description": "Filter by target age group: 'baby' (0-12m), 'toddler' (1-3y), 'child' (toys/general kids), 'unknown'.",
       "editor": "select",
       "enum": ["baby", "toddler", "child", "unknown"]
     },
@@ -72,6 +72,69 @@
       "minimum": 1,
       "maximum": 50,
       "editor": "number"
+    },
+    "asins": {
+      "sectionCaption": "Amazon",
+      "title": "Amazon ASINs",
+      "type": "array",
+      "description": "Array of Amazon Standard Identification Numbers (ASINs, e.g. ['B08N5WRWNW', 'B09V3HN1KC']) to screen against EU safety recalls. Maximum 1,000 ASINs per run.",
+      "editor": "stringList",
+      "maxItems": 1000,
+      "items": {
+        "type": "string"
+      }
+    },
+    "amazonUrls": {
+      "title": "Amazon Product URLs",
+      "type": "array",
+      "description": "List of Amazon product detail page URLs or shortlinks (e.g. ['https://www.amazon.de/dp/B08N5WRWNW', 'https://amzn.to/3example']) to extract identifiers from. Maximum 1,000 URLs per run.",
+      "editor": "stringList",
+      "maxItems": 1000,
+      "items": {
+        "type": "string"
+      }
+    },
+    "csvUrl": {
+      "sectionCaption": "Bulk CSV",
+      "title": "Catalog CSV URL",
+      "type": "string",
+      "description": "Public HTTPS URL of a remote product catalog CSV for batch recall screening (e.g. 'https://example.com/catalogs/products_2026.csv'). HTTP is rejected.",
+      "editor": "textfield"
+    },
+    "csvContent": {
+      "title": "Raw CSV Content",
+      "type": "string",
+      "description": "Direct raw CSV file content containing product identifiers (EAN, GTIN, ASIN, SKU) for bulk screening. Maximum size: 5 MB.",
+      "editor": "textarea"
+    },
+    "webhookUrl": {
+      "sectionCaption": "Webhook",
+      "title": "Webhook URL",
+      "type": "string",
+      "description": "Target HTTPS endpoint for real-time safety recall notifications (e.g. 'https://api.example.com/webhooks/safety-alerts' or Slack/Discord incoming webhook URLs). Must use HTTPS.",
+      "editor": "textfield"
+    },
+    "webhookFormat": {
+      "title": "Webhook Payload Format",
+      "type": "string",
+      "description": "Notification payload structure: 'generic' (standard pse.alert.v1 JSON), 'slack' (Slack Block Kit), or 'discord' (Discord Embeds). Default is 'generic'.",
+      "default": "generic",
+      "editor": "select",
+      "enum": ["generic", "slack", "discord"]
+    },
+    "webhookSecret": {
+      "title": "Webhook HMAC Secret",
+      "type": "string",
+      "description": "Shared secret key used to compute HMAC-SHA256 signature in the X-Hub-Signature-256 header (e.g. 'whsec_5f8a9b2c3d4e...').",
+      "editor": "textfield",
+      "isSecret": true
+    },
+    "webhookOnlyOnMatch": {
+      "title": "Webhook Only On Match",
+      "type": "boolean",
+      "description": "If true, sends webhook notifications only when product safety recall matches are found. If false, dispatches a summary for every run.",
+      "default": true,
+      "editor": "checkbox"
     }
   }
 }
