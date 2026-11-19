@@ -9,3 +9,4 @@ dist/
 /apps/actor/storage/
 
 
+.env

@@ -1,0 +1,32 @@
+# Lead Outreach: MIKI Hurtownia Zabawek (Poland)
+
+- **To:** b2b@miki.com.pl
+- **Language:** EN
+- **Website:** http://www.b2b.miki.com.pl/
+- **Phone:** +48 12 685 03 01
+- **Detected Focus:** infant, baby products and early childhood toys
+
+### Subject:
+`EU-GPSR Compliance & Amazon Listing Blocks: Catalog Audit for MIKI Hurtownia Zabawek`
+
+### Body:
+```text
+Hello,
+
+While reviewing your product range (infant, baby products and early childhood toys), we identified **24 recent EU Safety Gate (RAPEX) recall alerts** directly affecting your toy categories.
+
+Under the new **EU GPSR (Regulation 2023/988)**, wholesalers and distributors carry direct liability. Furthermore, marketplaces like **Amazon and Allegro** immediately suspend your B2B resellers' listings when an EAN or batch matches a Safety Gate alert.
+
+Our **ProductSafetyEngine** automates catalog screening against the official EU Safety Gate and US CPSC databases before goods ship.
+
+**Free 50-SKU Safety Audit for MIKI Hurtownia Zabawek:**
+1. **Zero-Setup Report:** Simply reply to this email with a CSV/Excel file of up to 50 EANs or product titles. We will return your complete PDF compliance report within 2 hours.
+2. **Self-Service (via Apify Cloud/API):** Run the check directly via our engine: https://apify.com/store
+
+Best regards,
+
+Thomas
+THFC Consulting
+info@thfc-consulting.de
+
+```
