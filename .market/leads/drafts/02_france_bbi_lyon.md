@@ -16,7 +16,7 @@ Madame, Monsieur,
 Je suis Thomas Hartmannsgruber de THFC Consulting et je développe en tant que développeur de logiciels des moteurs dédiés aux entreprises. Vous trouverez des informations détaillées sur mon parcours et sur mes moteurs directement sur ma page web :
 https://thfc-consulting.de/labs/product-safety-fr
 
-Pour la gamme de produits de votre entreprise, j'ai développé un outil potentiellement intéressant qui vérifie automatiquement les codes EAN et noms de produits par rapport à la base officielle EU Safety Gate, car comme vous le savez peut-être, le règlement européen sur la sécurité générale des produits (GPSR) est en vigueur depuis décembre 2024.
+Pour l'assortiment de jeux, jouets et loisirs de BBI Lyon, j'ai développé un outil potentiellement intéressant qui vérifie automatiquement les codes EAN et noms de produits par rapport à la base officielle EU Safety Gate, car comme vous le savez peut-être, le règlement européen sur la sécurité générale des produits (GPSR) est en vigueur depuis décembre 2024.
 Le système EU Safety Gate publiant de nouvelles alertes chaque semaine et les jouets figurant régulièrement parmi les catégories les plus signalées, il est essentiel pour votre conformité de rester à jour.
 Ma motivation personnelle : en tant que père de deux jeunes filles, la sécurité des jouets d'enfants et leur conformité stricte aux exigences européennes me tiennent particulièrement à cœur.
 

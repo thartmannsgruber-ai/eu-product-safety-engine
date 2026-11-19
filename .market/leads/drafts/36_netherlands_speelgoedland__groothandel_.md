@@ -16,7 +16,7 @@ Geachte heer, mevrouw,
 Mijn naam is Thomas Hartmannsgruber van THFC Consulting en ik ontwikkel als software-ontwikkelaar gerichte engines voor bedrijven. Achtergrondinformatie over mij en mijn ontwikkelde engines vindt u direct op mijn homepage:
 https://thfc-consulting.de/labs/product-safety-en
 
-Voor het productassortiment van uw onderneming heb ik een wellicht interessante tool ontwikkeld die EAN-codes en productnamen automatisch controleert tegen de officiële EU Safety Gate database, want zoals u wellicht weet geldt sinds december 2024 de nieuwe Europese Verordening Algemene Productveiligheid (GPSR).
+Voor het uitgebreide assortiment speelgoed en pluche van Speelgoedland, heb ik een wellicht interessante tool ontwikkeld die EAN-codes en productnamen automatisch controleert tegen de officiële EU Safety Gate database, want zoals u wellicht weet geldt sinds december 2024 de nieuwe Europese Verordening Algemene Productveiligheid (GPSR).
 Aangezien het EU Safety Gate wekelijks nieuwe meldingen publiceert en speelgoed regelmatig tot de meest gemelde categorieën behoort, is het vanuit compliance-oogpunt essentieel om actueel te blijven.
 Mijn persoonlijke motivatie hierachter: als vader van twee jonge dochters hecht ik veel waarde aan veilig kinderspeelgoed dat volledig voldoet aan de Europese normen.
 

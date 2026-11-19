@@ -130,6 +130,36 @@ def generate_draft(lead, title, desc):
     }
     labs_url = labs_url_map.get(lang, 'https://thfc-consulting.de/labs/product-safety-en')
     
+    custom_niche_fr = {
+        'Télé Surprises Jeux et Jouets TSJJ': "Pour l'assortiment de jeux, jouets et surprises de Télé Surprises Jeux et Jouets,",
+        'BBI Lyon': "Pour l'assortiment de jeux, jouets et loisirs de BBI Lyon,",
+        'One For Fun France': "Pour le catalogue de jouets et marques de distribution de One For Fun,",
+        'SARL JR Distribution / Kermesse-Fêtes': "Pour votre catalogue d'articles de kermesse, fêtes et petits jouets chez Kermesse-Fêtes,",
+        'SAYAN France': "Pour la gamme de jouets et articles pour enfants de SAYAN France,",
+        'Sud Grossiste': "Pour le catalogue de jouets et jeux de loisir de Sud Grossiste,",
+        'ARTOYZ': "Pour votre collection de figurines, designer toys et jeux chez ARTOYZ,",
+        'Simple. by Le Jouet Simple': "Pour votre gamme de jouets éco-conçus et recyclables chez Le Jouet Simple,",
+        'Mondocash': "Pour l'assortiment de jouets et articles récréatifs de Mondocash,",
+        'Léon Bulle': "Pour l'assortiment de jouets, bulles de savon et jeux d'extérieur de Léon Bulle,"
+    }
+    
+    custom_niche_nl = {
+        'Vergeertoys B.V.': "Voor het assortiment menuboxen, uitdeelspeelgoed en kinderartikelen van Vergeertoys,",
+        'Dino Trading bv': "Voor het groothandelsassortiment speelgoed van Dino Trading,",
+        'Helms Zelfbedieningsgroothandel BV Deventer': "Voor het speelgoed- en seizoensassortiment van Groothandel Helms,",
+        'HAZA - Witbaard': "Voor het feestelijke speelgoed- en partyassortiment van HAZA - Witbaard,",
+        'Happy Seven': "Voor het assortiment trendspeelgoed en kinderartikelen van Happy Seven,",
+        'United Supplies B.V.': "Voor het leverings- en speelgoedassortiment van United Supplies,",
+        'Zyntoo': "Voor de collectie speelgoed, gifts en gadgets van Zyntoo,",
+        'Speelgoedland (Groothandel)': "Voor het uitgebreide assortiment speelgoed en pluche van Speelgoedland,",
+        'Mechato': "Voor het speelgoed- en knuffelassortiment van Mechato,",
+        'Twisk Groothandel BV': "Voor het speelgoed-, kermis- en vrijetijdsassortiment van Twisk Groothandel,",
+        'Gebr. Simon': "Voor uw groothandelsassortiment speelgoed en kinderboeken bij Gebr. Simon,",
+        'Spelendgoed': "Voor de collectie educatief en ontwikkelingsgericht speelgoed van Spelendgoed,",
+        'Bellus Toys': "Voor het assortiment pluche en speelgoed van Bellus Toys,",
+        'Q&A Impex groothandel': "Voor het speelgoedassortiment van Q&A Impex,"
+    }
+    
     if lang == 'de':
         subject = f"Safety-Gate-Abgleich für {company}?"
         body = f"""Sehr geehrte Damen und Herren,
@@ -157,12 +187,13 @@ Kein Interesse? Antworten Sie einfach kurz mit „Nein“ – dann melde ich mic
 """
     elif lang == 'fr':
         subject = f"Vérification Safety Gate pour {company} ?"
+        intro_niche = custom_niche_fr.get(company, "Pour la gamme de produits de votre entreprise,")
         body = f"""Madame, Monsieur,
 
 Je suis Thomas Hartmannsgruber de THFC Consulting et je développe en tant que développeur de logiciels des moteurs dédiés aux entreprises. Vous trouverez des informations détaillées sur mon parcours et sur mes moteurs directement sur ma page web :
 {labs_url}
 
-Pour la gamme de produits de votre entreprise, j'ai développé un outil potentiellement intéressant qui vérifie automatiquement les codes EAN et noms de produits par rapport à la base officielle EU Safety Gate, car comme vous le savez peut-être, le règlement européen sur la sécurité générale des produits (GPSR) est en vigueur depuis décembre 2024.
+{intro_niche} j'ai développé un outil potentiellement intéressant qui vérifie automatiquement les codes EAN et noms de produits par rapport à la base officielle EU Safety Gate, car comme vous le savez peut-être, le règlement européen sur la sécurité générale des produits (GPSR) est en vigueur depuis décembre 2024.
 Le système EU Safety Gate publiant de nouvelles alertes chaque semaine et les jouets figurant régulièrement parmi les catégories les plus signalées, il est essentiel pour votre conformité de rester à jour.
 Ma motivation personnelle : en tant que père de deux jeunes filles, la sécurité des jouets d'enfants et leur conformité stricte aux exigences européennes me tiennent particulièrement à cœur.
 
@@ -182,12 +213,13 @@ Pas intéressé ? Répondez simplement « Non » et je ne vous recontacterai pas
 """
     elif lang == 'nl':
         subject = f"Safety Gate controle voor {company}?"
+        intro_niche = custom_niche_nl.get(company, "Voor het productassortiment van uw onderneming,")
         body = f"""Geachte heer, mevrouw,
 
 Mijn naam is Thomas Hartmannsgruber van THFC Consulting en ik ontwikkel als software-ontwikkelaar gerichte engines voor bedrijven. Achtergrondinformatie over mij en mijn ontwikkelde engines vindt u direct op mijn homepage:
 {labs_url}
 
-Voor het productassortiment van uw onderneming heb ik een wellicht interessante tool ontwikkeld die EAN-codes en productnamen automatisch controleert tegen de officiële EU Safety Gate database, want zoals u wellicht weet geldt sinds december 2024 de nieuwe Europese Verordening Algemene Productveiligheid (GPSR).
+{intro_niche} heb ik een wellicht interessante tool ontwikkeld die EAN-codes en productnamen automatisch controleert tegen de officiële EU Safety Gate database, want zoals u wellicht weet geldt sinds december 2024 de nieuwe Europese Verordening Algemene Productveiligheid (GPSR).
 Aangezien het EU Safety Gate wekelijks nieuwe meldingen publiceert en speelgoed regelmatig tot de meest gemelde categorieën behoort, is het vanuit compliance-oogpunt essentieel om actueel te blijven.
 Mijn persoonlijke motivatie hierachter: als vader van twee jonge dochters hecht ik veel waarde aan veilig kinderspeelgoed dat volledig voldoet aan de Europese normen.
 
