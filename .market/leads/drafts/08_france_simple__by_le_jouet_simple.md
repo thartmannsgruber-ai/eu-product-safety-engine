@@ -22,7 +22,7 @@ Ma motivation personnelle : en tant que père de deux jeunes filles, la sécurit
 
 Afin de découvrir cet outil, je vous propose de faire vérifier 50 articles de votre catalogue de manière sans engagement et d'abord gratuite par le moteur. Une simple réponse suffit.
 
-Si vous êtes ensuite satisfait du résultat, vous pourrez accéder pour la suite à mon moteur « Product-Safety » via la plateforme SaaS reconnue Apify – en toute sécurité juridique et parfaitement intégré à vos systèmes informatiques. Voici le lien : https://apify.com/thfc_labs/eu-product-safety-actor
+Si vous êtes ensuite satisfait du résultat, vous pourrez accéder pour la suite à mon moteur « Product-Safety » via la plateforme SaaS reconnue Apify – de manière fiable et parfaitement intégrée à vos systèmes informatiques. Voici le lien : https://apify.com/thfc_labs/eu-product-safety-actor
 
 Si vous ne possédez pas encore de compte sur la plateforme Apify : l'inscription est gratuite et vous bénéficiez de 5 $ de crédit de bienvenue (ce qui vous permet avec le moteur Product-Safety par exemple de vérifier 1 000 produits ou d'assurer le suivi hebdomadaire de 100 articles pendant 10 semaines).
 
@@ -30,6 +30,7 @@ Au plaisir d'échanger avec vous et salutations d'Allemagne,
 Thomas Hartmannsgruber
 THFC Consulting · thfc-consulting.de
 Großheppacherstraße 16/1 · 71364 Winnenden, Allemagne
+Mentions légales & Confidentialité : thfc-consulting.de/impressum
 
 Pas intéressé ? Répondez simplement « Non » et je ne vous recontacterai pas.
 

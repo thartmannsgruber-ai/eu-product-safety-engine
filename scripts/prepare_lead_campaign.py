@@ -143,14 +143,15 @@ Meine persönliche Motivation dahinter: Als Vater zweier junger Töchter liegt m
 
 Um die Engine kennenzulernen, würde ich Ihnen anbieten, 50 Artikel aus Ihrem Sortiment unverbindlich und zunächst kostenfrei durch die Engine prüfen zu lassen. Eine kurze Antwort genügt.
 
-Wenn Sie anschließend mit dem Ergebnis zufrieden sind, können Sie für die weitere Verwendung meiner entwickelten Engine „Product-Safety“ über die international renommierte SaaS-Plattform Apify zugreifen - rechtssicher und ideal an Ihre IT-Systeme angebunden. Hier der Link: {actor_url}
+Wenn Sie anschließend mit dem Ergebnis zufrieden sind, können Sie für die weitere Verwendung meiner entwickelten Engine „Product-Safety“ über die international renommierte SaaS-Plattform Apify zugreifen - zuverlässig und nahtlos an Ihre IT-Systeme angebunden. Hier der Link: {actor_url}
 
 Sollten Sie bei der Apify Plattform noch keinen Account besitzen: Sie können sich kostenlos registrieren und erhalten 5$ Startguthaben (damit können Sie mit der Product-Safety Engine z. B. 1.000 Produkte prüfen lassen oder 100 Artikel über 10 Wochen lang wöchentlich überwachen).
 
-Ich freue mich über eine Rückmeldung und Grüße aus Deutschland
+Ich freue mich über eine Rückmeldung und sende viele Grüße
 Thomas Hartmannsgruber
 THFC Consulting · thfc-consulting.de
 Großheppacherstraße 16/1 · 71364 Winnenden
+Impressum & Datenschutz: thfc-consulting.de/impressum
 
 Kein Interesse? Antworten Sie einfach kurz mit „Nein“ – dann melde ich mich nicht wieder.
 """
@@ -167,7 +168,7 @@ Ma motivation personnelle : en tant que père de deux jeunes filles, la sécurit
 
 Afin de découvrir cet outil, je vous propose de faire vérifier 50 articles de votre catalogue de manière sans engagement et d'abord gratuite par le moteur. Une simple réponse suffit.
 
-Si vous êtes ensuite satisfait du résultat, vous pourrez accéder pour la suite à mon moteur « Product-Safety » via la plateforme SaaS reconnue Apify – en toute sécurité juridique et parfaitement intégré à vos systèmes informatiques. Voici le lien : {actor_url}
+Si vous êtes ensuite satisfait du résultat, vous pourrez accéder pour la suite à mon moteur « Product-Safety » via la plateforme SaaS reconnue Apify – de manière fiable et parfaitement intégrée à vos systèmes informatiques. Voici le lien : {actor_url}
 
 Si vous ne possédez pas encore de compte sur la plateforme Apify : l'inscription est gratuite et vous bénéficiez de 5 $ de crédit de bienvenue (ce qui vous permet avec le moteur Product-Safety par exemple de vérifier 1 000 produits ou d'assurer le suivi hebdomadaire de 100 articles pendant 10 semaines).
 
@@ -175,6 +176,7 @@ Au plaisir d'échanger avec vous et salutations d'Allemagne,
 Thomas Hartmannsgruber
 THFC Consulting · thfc-consulting.de
 Großheppacherstraße 16/1 · 71364 Winnenden, Allemagne
+Mentions légales & Confidentialité : thfc-consulting.de/impressum
 
 Pas intéressé ? Répondez simplement « Non » et je ne vous recontacterai pas.
 """
@@ -191,7 +193,7 @@ Mijn persoonlijke motivatie hierachter: als vader van twee jonge dochters hecht 
 
 Om vrijblijvend kennis te maken met de engine, bied ik u aan om eerst 50 artikelen uit uw assortiment kosteloos door de engine te laten controleren. Een kort antwoord is voldoende.
 
-Indien u vervolgens tevreden bent over het resultaat, kunt u voor het verdere gebruik van mijn ontwikkelde engine "Product-Safety" terecht via het internationaal gerenommeerde SaaS-platform Apify – juridisch veilig en optimaal gekoppeld aan uw IT-systemen. Hier is de link: {actor_url}
+Indien u vervolgens tevreden bent over het resultaat, kunt u voor het verdere gebruik van mijn ontwikkelde engine "Product-Safety" terecht via het internationaal gerenommeerde SaaS-platform Apify – betrouwbaar en naadloos gekoppeld aan uw IT-systemen. Hier is de link: {actor_url}
 
 Mocht u bij het Apify-platform nog geen account hebben: u kunt zich gratis registreren en ontvangt $ 5 starttegoed (waarmee u met de Product-Safety engine bijv. 1.000 producten kunt laten controleren of 100 artikelen gedurende 10 weken wekelijks kunt monitoren).
 
@@ -199,6 +201,7 @@ Ik zie uit naar uw reactie en vriendelijke groeten uit Duitsland,
 Thomas Hartmannsgruber
 THFC Consulting · thfc-consulting.de
 Großheppacherstraße 16/1 · 71364 Winnenden, Duitsland
+Colofon & Privacy : thfc-consulting.de/impressum
 
 Geen interesse? Reageer kort met "Nee" en ik neem geen contact meer met u op.
 """
@@ -215,7 +218,7 @@ La mia motivazione personale: come padre di due bambine piccole, mi sta molto a 
 
 Per farvi conoscere il motore, vi propongo di far verificare 50 articoli del vostro assortimento senza impegno e inizialmente a titolo gratuito tramite il motore stesso. È sufficiente una breve risposta.
 
-Se sarete successivamente soddisfatti del risultato, potrete accedere per l'uso continuo al mio motore "Product-Safety" tramite la rinomata piattaforma SaaS internazionale Apify – in piena conformità giuridica e perfettamente integrato nei vostri sistemi IT. Ecco il link: {actor_url}
+Se sarete successivamente soddisfatti del risultato, potrete accedere per l'uso continuo al mio motore "Product-Safety" tramite la rinomata piattaforma SaaS internazionale Apify – in modo affidabile e perfettamente integrato nei vostri sistemi IT. Ecco il link: {actor_url}
 
 Se non disponete ancora di un account sulla piattaforma Apify: potete registrarvi gratuitamente e ricevere 5 $ di credito iniziale (con cui potrete con il motore Product-Safety ad es. verificare 1.000 prodotti oppure monitorare settimanalmente 100 articoli per 10 settimane).
 
@@ -223,6 +226,7 @@ Resto in attesa di un vostro riscontro e vi porgo cordiali saluti dalla Germania
 Thomas Hartmannsgruber
 THFC Consulting · thfc-consulting.de
 Großheppacherstraße 16/1 · 71364 Winnenden, Germania
+Note legali & Privacy : thfc-consulting.de/impressum
 
 Non siete interessati? Rispondete semplicemente "No" e non vi ricontatterò più.
 """
@@ -239,7 +243,7 @@ Mi motivación personal: como padre de dos niñas pequeñas, me importa profunda
 
 Para conocer el funcionamiento del motor, les ofrezco revisar 50 artículos de su catálogo de forma gratuita y sin compromiso mediante el propio motor. Basta con una breve respuesta.
 
-Si posteriormente quedan satisfechos con el resultado, podrán acceder para el uso continuado a mi motor «Product-Safety» a través de la reconocida plataforma internacional SaaS Apify – con plena seguridad jurídica y perfectamente integrado en sus sistemas informáticos. Aquí tienen el enlace: {actor_url}
+Si posteriormente quedan satisfechos con el resultado, podrán acceder para el uso continuado a mi motor «Product-Safety» a través de la reconocida plataforma internacional SaaS Apify – de forma fiable y perfectamente integrado en sus sistemas informáticos. Aquí tienen el enlace: {actor_url}
 
 Si aún no disponen de cuenta en la plataforma Apify: pueden registrarse gratis y recibir 5 $ de saldo inicial (lo que les permite con el motor Product-Safety, por ejemplo, verificar 1.000 productos o supervisar semanalmente 100 artículos durante 10 semanas).
 
@@ -247,6 +251,7 @@ Agradezco de antemano su respuesta y les envío un cordial saludo desde Alemania
 Thomas Hartmannsgruber
 THFC Consulting · thfc-consulting.de
 Großheppacherstraße 16/1 · 71364 Winnenden, Alemania
+Aviso legal y Privacidad : thfc-consulting.de/impressum
 
 ¿No le interesa? Responda simplemente «No» y no volveré a escribirle.
 """
@@ -263,7 +268,7 @@ My personal motivation behind this: as a father of two young daughters, ensuring
 
 To introduce you to the engine, I would be glad to check 50 items from your product range free of charge and without any obligation. A brief reply to this email is all it takes.
 
-If you are subsequently satisfied with the results, you can access my "Product-Safety" engine for continued use via the internationally renowned SaaS platform Apify – with full legal certainty and seamless IT integration. Here is the link: {actor_url}
+If you are subsequently satisfied with the results, you can access my "Product-Safety" engine for continued use via the internationally renowned SaaS platform Apify – reliably and seamlessly integrated into your IT systems. Here is the link: {actor_url}
 
 If you do not have an account on the Apify platform yet: registration is free and includes $5 in welcome credits (allowing you with the Product-Safety engine, for example, to screen 1,000 products or monitor 100 SKUs weekly over 10 weeks).
 
@@ -271,6 +276,7 @@ I look forward to hearing from you and send best regards from Germany,
 Thomas Hartmannsgruber
 THFC Consulting · thfc-consulting.de
 Großheppacherstraße 16/1 · 71364 Winnenden, Germany
+Legal Notice & Privacy : thfc-consulting.de/impressum
 
 Not interested? Simply reply "No" and I will not contact you again.
 """

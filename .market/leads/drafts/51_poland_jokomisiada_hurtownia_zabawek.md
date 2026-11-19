@@ -22,7 +22,7 @@ My personal motivation behind this: as a father of two young daughters, ensuring
 
 To introduce you to the engine, I would be glad to check 50 items from your product range free of charge and without any obligation. A brief reply to this email is all it takes.
 
-If you are subsequently satisfied with the results, you can access my "Product-Safety" engine for continued use via the internationally renowned SaaS platform Apify – with full legal certainty and seamless IT integration. Here is the link: https://apify.com/thfc_labs/eu-product-safety-actor
+If you are subsequently satisfied with the results, you can access my "Product-Safety" engine for continued use via the internationally renowned SaaS platform Apify – reliably and seamlessly integrated into your IT systems. Here is the link: https://apify.com/thfc_labs/eu-product-safety-actor
 
 If you do not have an account on the Apify platform yet: registration is free and includes $5 in welcome credits (allowing you with the Product-Safety engine, for example, to screen 1,000 products or monitor 100 SKUs weekly over 10 weeks).
 
@@ -30,6 +30,7 @@ I look forward to hearing from you and send best regards from Germany,
 Thomas Hartmannsgruber
 THFC Consulting · thfc-consulting.de
 Großheppacherstraße 16/1 · 71364 Winnenden, Germany
+Legal Notice & Privacy : thfc-consulting.de/impressum
 
 Not interested? Simply reply "No" and I will not contact you again.
 

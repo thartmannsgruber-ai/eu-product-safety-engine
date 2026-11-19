@@ -22,14 +22,15 @@ Meine persönliche Motivation dahinter: Als Vater zweier junger Töchter liegt m
 
 Um die Engine kennenzulernen, würde ich Ihnen anbieten, 50 Artikel aus Ihrem Sortiment unverbindlich und zunächst kostenfrei durch die Engine prüfen zu lassen. Eine kurze Antwort genügt.
 
-Wenn Sie anschließend mit dem Ergebnis zufrieden sind, können Sie für die weitere Verwendung meiner entwickelten Engine „Product-Safety“ über die international renommierte SaaS-Plattform Apify zugreifen - rechtssicher und ideal an Ihre IT-Systeme angebunden. Hier der Link: https://apify.com/thfc_labs/eu-product-safety-actor
+Wenn Sie anschließend mit dem Ergebnis zufrieden sind, können Sie für die weitere Verwendung meiner entwickelten Engine „Product-Safety“ über die international renommierte SaaS-Plattform Apify zugreifen - zuverlässig und nahtlos an Ihre IT-Systeme angebunden. Hier der Link: https://apify.com/thfc_labs/eu-product-safety-actor
 
 Sollten Sie bei der Apify Plattform noch keinen Account besitzen: Sie können sich kostenlos registrieren und erhalten 5$ Startguthaben (damit können Sie mit der Product-Safety Engine z. B. 1.000 Produkte prüfen lassen oder 100 Artikel über 10 Wochen lang wöchentlich überwachen).
 
-Ich freue mich über eine Rückmeldung und Grüße aus Deutschland
+Ich freue mich über eine Rückmeldung und sende viele Grüße
 Thomas Hartmannsgruber
 THFC Consulting · thfc-consulting.de
 Großheppacherstraße 16/1 · 71364 Winnenden
+Impressum & Datenschutz: thfc-consulting.de/impressum
 
 Kein Interesse? Antworten Sie einfach kurz mit „Nein“ – dann melde ich mich nicht wieder.
 
