@@ -18,13 +18,18 @@ import {
   resolveIdentifier,
   type AsinEanProvider,
 } from '@productsafetyengine/core';
-import { syncSafetyGate } from '@productsafetyengine/fetcher';
+import { syncSafetyGate, type ComplianceFetcher } from '@productsafetyengine/fetcher';
 import {
   PpeEventEmitter,
   PPE_EVENTS,
   type PPEEventType,
   isApifyEnvironment,
 } from './ppe.js';
+import {
+  processBatchCsv,
+  type BatchReport,
+  failActor,
+} from './batch.js';
 
 /**
  * Helper to normalize strings for alias resolution (empty string -> undefined).
@@ -312,6 +317,8 @@ export interface EnrichedAlertItem extends AlertRecord {
   input_kind?: string;
   resolution_method?: string;
   match_confidence?: 'keyword' | string;
+  sku?: string;
+  csv_row?: number;
   is_child_related?: boolean;
   child_age_group?: string;
   child_hazards?: string[];
@@ -326,6 +333,9 @@ export interface ActorRunOptions {
   keyValueStore?: {
     setValue: (key: string, value: unknown) => Promise<void>;
   };
+  fetcher?: ComplianceFetcher;
+  customFetch?: typeof fetch;
+  failActor?: (reason: string) => Promise<void> | void;
 }
 
 export interface ActorRunResult {
@@ -336,6 +346,8 @@ export interface ActorRunResult {
   eventSummary: Record<PPEEventType, number>;
   totalCostUsd: number;
   ppeEventsTriggered: number;
+  batchReport?: BatchReport;
+  error?: string;
 }
 
 /**
@@ -389,8 +401,29 @@ export async function runActor(
   rawInput: unknown,
   options: ActorRunOptions = {}
 ): Promise<ActorRunResult> {
-  const input = ActorInputSchema.parse(rawInput ?? {});
   const emitter = options.emitter ?? new PpeEventEmitter();
+
+  let input: ActorInput;
+  try {
+    input = ActorInputSchema.parse(rawInput ?? {});
+  } catch (err: any) {
+    const reason = `Ungültiger Actor-Input: ${err?.message || String(err)}`;
+    await failActor(reason, options.failActor);
+    if (process.env.NODE_ENV !== 'test') {
+      console.error(`[Actor] Input validation failed: ${reason}`);
+    }
+    return {
+      items: [],
+      totalCount: 0,
+      invalid_eans: [],
+      unresolved: [],
+      eventSummary: emitter.getEventCounts(),
+      totalCostUsd: emitter.calculateEstimatedCost(),
+      ppeEventsTriggered: emitter.getTotalEvents(),
+      error: reason,
+    };
+  }
+
   const storage =
     options.storage ??
     new SqliteAlertStorage(process.env.SQLITE_DB_PATH || ':memory:', { autoSeed: true });
@@ -414,6 +447,8 @@ export async function runActor(
 
   const matchedAlerts: EnrichedAlertItem[] = [];
   const seenAlertNumbers = new Set<string>();
+  const invalidEans: string[] = [];
+  const unresolved: string[] = [];
 
   const addUniqueAlerts = (
     alerts: AlertRecord[],
@@ -441,6 +476,59 @@ export async function runActor(
     }
   };
 
+  // 0. Bulk-CSV-Import (F09)
+  let batchReport: BatchReport | undefined;
+  if (input.csvContent || input.csvUrl) {
+    try {
+      const batchResult = await processBatchCsv(input, {
+        storage,
+        emitter,
+        asinEanProvider: options.asinEanProvider,
+        keyValueStore: options.keyValueStore,
+        fetcher: options.fetcher,
+        customFetch: options.customFetch,
+        maxItems: input.maxItems,
+        failActor: options.failActor,
+      });
+
+      batchReport = batchResult.report;
+
+      for (const item of batchResult.items) {
+        if (matchedAlerts.length < input.maxItems) {
+          matchedAlerts.push(item);
+        }
+      }
+
+      for (const unres of batchResult.unresolved) {
+        if (!unresolved.includes(unres)) {
+          unresolved.push(unres);
+        }
+      }
+
+      for (const inv of batchResult.invalidEans) {
+        if (!invalidEans.includes(inv)) {
+          invalidEans.push(inv);
+        }
+      }
+    } catch (err: any) {
+      const reason = err?.message || 'Fehlerhafte CSV-Datei';
+      await failActor(reason, options.failActor);
+      if (process.env.NODE_ENV !== 'test') {
+        console.error(`[Actor] Batch CSV processing failed: ${reason}`);
+      }
+      return {
+        items: [],
+        totalCount: 0,
+        invalid_eans: [],
+        unresolved: [],
+        eventSummary: emitter.getEventCounts(),
+        totalCostUsd: emitter.calculateEstimatedCost(),
+        ppeEventsTriggered: emitter.getTotalEvents(),
+        error: reason,
+      };
+    }
+  }
+
   // 1. Filter nach EAN / GTIN (Einzel- und Batch-Screening)
   const eansToProcess: string[] = [];
   if (input.eans && Array.isArray(input.eans)) {
@@ -453,8 +541,6 @@ export async function runActor(
   if (input.ean && !eansToProcess.includes(input.ean)) {
     eansToProcess.unshift(input.ean);
   }
-
-  const invalidEans: string[] = [];
 
   for (const ean of eansToProcess) {
     const valid = isValidEan(ean);
@@ -496,8 +582,6 @@ export async function runActor(
       }
     }
   }
-
-  const unresolved: string[] = [];
 
   for (const { raw } of identifiersToResolve) {
     const resolved = await resolveIdentifier(raw, options.asinEanProvider);
@@ -607,6 +691,9 @@ export async function runActor(
 
   // 5. Wenn ueberhaupt kein Filter gesetzt wurde: Alle Alerts bis maxItems laden
   if (
+    !input.csvContent &&
+    !input.csvUrl &&
+    !batchReport &&
     eansToProcess.length === 0 &&
     identifiersToResolve.length === 0 &&
     !input.week &&
@@ -667,5 +754,6 @@ export async function runActor(
     eventSummary: emitter.getEventCounts(),
     totalCostUsd: emitter.calculateEstimatedCost(),
     ppeEventsTriggered: emitter.getTotalEvents(),
+    batchReport,
   };
 }

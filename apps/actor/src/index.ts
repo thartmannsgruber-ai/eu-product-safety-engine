@@ -11,6 +11,7 @@ import { runActor, type ActorRunResult } from './actor.js';
 
 export * from './ppe.js';
 export * from './actor.js';
+export * from './batch.js';
 
 /**
  * Hauptfunktion fuer die Apify-Actor-Ausfuehrung im Container.

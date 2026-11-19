@@ -98,6 +98,14 @@
       "match_confidence": {
         "type": "string",
         "description": "Confidence level of match (e.g. 'keyword' for title slug matches)."
+      },
+      "sku": {
+        "type": "string",
+        "description": "Stock Keeping Unit from imported catalog CSV."
+      },
+      "csv_row": {
+        "type": "integer",
+        "description": "Row number in the imported CSV file."
       }
     },
     "required": [
