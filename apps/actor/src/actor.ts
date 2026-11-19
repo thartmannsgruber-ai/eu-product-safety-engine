@@ -15,6 +15,8 @@ import {
   SqliteAlertStorage,
   EmptyDatabaseError,
   classifyChildProduct,
+  resolveIdentifier,
+  type AsinEanProvider,
 } from '@productsafetyengine/core';
 import { syncSafetyGate } from '@productsafetyengine/fetcher';
 import {
@@ -252,7 +254,17 @@ const baseActorInputSchema = z
       };
     }
     if (raw && typeof raw === 'object') {
-      const r = raw as Record<string, unknown>;
+      const r = { ...(raw as Record<string, unknown>) };
+      let asins = r.asins;
+      if (!asins && 'asin' in r && typeof r.asin === 'string' && r.asin.trim()) {
+        asins = [r.asin.trim()];
+      }
+      let amazonUrls = r.amazonUrls;
+      if (!amazonUrls && 'amazonUrl' in r && typeof r.amazonUrl === 'string' && r.amazonUrl.trim()) {
+        amazonUrls = [r.amazonUrl.trim()];
+      }
+      delete r.asin;
+      delete r.amazonUrl;
       const query =
         normalizeString(r.query) ??
         normalizeString(r.searchTerm) ??
@@ -262,6 +274,8 @@ const baseActorInputSchema = z
         ...r,
         ...(query !== undefined ? { query } : {}),
         ...(week !== undefined ? { week } : {}),
+        ...(asins !== undefined ? { asins } : {}),
+        ...(amazonUrls !== undefined ? { amazonUrls } : {}),
       };
     }
     return raw;
@@ -293,19 +307,60 @@ export const ActorInputSchema = Object.assign(baseActorInputSchema, {
 
 export type ActorInput = z.infer<typeof ActorInputSchema>;
 
+export interface EnrichedAlertItem extends AlertRecord {
+  input_identifier?: string;
+  input_kind?: string;
+  resolution_method?: string;
+  match_confidence?: 'keyword' | string;
+  is_child_related?: boolean;
+  child_age_group?: string;
+  child_hazards?: string[];
+  [key: string]: unknown;
+}
+
 export interface ActorRunOptions {
   storage?: IAlertStorage;
   emitter?: PpeEventEmitter;
   pushData?: boolean;
+  asinEanProvider?: AsinEanProvider;
+  keyValueStore?: {
+    setValue: (key: string, value: unknown) => Promise<void>;
+  };
 }
 
 export interface ActorRunResult {
-  items: AlertRecord[];
+  items: EnrichedAlertItem[];
   totalCount: number;
   invalid_eans: string[];
+  unresolved: string[];
   eventSummary: Record<PPEEventType, number>;
   totalCostUsd: number;
   ppeEventsTriggered: number;
+}
+
+/**
+ * Speichert einen Datensatz im Standard KeyValueStore von Apify via Actor.setValue().
+ * Falls nicht in der Apify-Cloud ausgefuehrt (z.B. Offline-Tests), erfolgt ein sicherer No-op Fallback,
+ * es sei denn, ein customStore wird in den Optionen uebergeben.
+ */
+export async function setApifyKeyValue(
+  key: string,
+  value: unknown,
+  customStore?: { setValue: (key: string, value: unknown) => Promise<void> }
+): Promise<void> {
+  if (customStore && typeof customStore.setValue === 'function') {
+    await customStore.setValue(key, value);
+    return;
+  }
+  if (isApifyEnvironment()) {
+    try {
+      await Actor.setValue(key, value);
+    } catch (err) {
+      if (process.env.NODE_ENV !== 'test') {
+        console.warn(`[Actor] Failed to setValue('${key}') in Apify KeyValueStore:`, err);
+      }
+    }
+  }
 }
 
 /**
@@ -357,14 +412,18 @@ export async function runActor(
     );
   }
 
-  const matchedAlerts: AlertRecord[] = [];
+  const matchedAlerts: EnrichedAlertItem[] = [];
   const seenAlertNumbers = new Set<string>();
 
-  const addUniqueAlerts = (alerts: AlertRecord[]): void => {
+  const addUniqueAlerts = (
+    alerts: AlertRecord[],
+    meta?: Partial<EnrichedAlertItem>
+  ): void => {
     for (const alert of alerts) {
       if (!seenAlertNumbers.has(alert.alert_number)) {
         seenAlertNumbers.add(alert.alert_number);
-        matchedAlerts.push(alert);
+        const enriched: EnrichedAlertItem = meta ? { ...alert, ...meta } : { ...alert };
+        matchedAlerts.push(enriched);
 
         // Pay-Per-Event: 'alert-returned' fuer jeden zurueckgegebenen Alert
         emitter.emitAlertReturned({
@@ -414,10 +473,88 @@ export async function runActor(
       matchCount: eanMatches.length,
     });
 
-    addUniqueAlerts(eanMatches);
+    addUniqueAlerts(eanMatches, {
+      input_identifier: ean,
+      input_kind: 'gtin',
+      resolution_method: 'direct_gtin',
+    });
   }
 
-  // 2. Filter nach Woche (sofern maxItems noch nicht erreicht)
+  // 2. Filter nach ASINs und Amazon-URLs (F08: resolveIdentifier)
+  const identifiersToResolve: Array<{ raw: string; source: 'asin' | 'amazon_url' }> = [];
+  if (input.asins && Array.isArray(input.asins)) {
+    for (const a of input.asins) {
+      if (typeof a === 'string' && a.trim().length > 0) {
+        identifiersToResolve.push({ raw: a.trim(), source: 'asin' });
+      }
+    }
+  }
+  if (input.amazonUrls && Array.isArray(input.amazonUrls)) {
+    for (const u of input.amazonUrls) {
+      if (typeof u === 'string' && u.trim().length > 0) {
+        identifiersToResolve.push({ raw: u.trim(), source: 'amazon_url' });
+      }
+    }
+  }
+
+  const unresolved: string[] = [];
+
+  for (const { raw } of identifiersToResolve) {
+    const resolved = await resolveIdentifier(raw, options.asinEanProvider);
+
+    if (resolved.ean) {
+      // Aufgelöste EANs laufen über den vorhandenen EAN-Pfad (PPE ean-checked pro EAN)
+      const ean = resolved.ean;
+      const valid = isValidEan(ean);
+      if (!valid && !invalidEans.includes(ean)) {
+        invalidEans.push(ean);
+      }
+
+      const eanMatches = await storage.getByEan(ean);
+
+      emitter.emitEanChecked({
+        ean,
+        validGtin: valid,
+        matchCount: eanMatches.length,
+      });
+
+      addUniqueAlerts(eanMatches, {
+        input_identifier: raw,
+        input_kind: resolved.kind,
+        resolution_method: resolved.resolution_method,
+      });
+    } else if (resolved.keywords && resolved.keywords.length > 0) {
+      // Suchbegriffe aus der URL laufen über den vorhandenen Query-Pfad (PPE query-executed)
+      const queryString = resolved.keywords.join(' ');
+      const searchMatches = await storage.findAlerts({
+        query: queryString,
+        category: input.category,
+        childProductsOnly: input.childProductsOnly,
+        ageGroup: input.ageGroup,
+        hazard: input.hazard,
+        limit: Math.max(0, input.maxItems - matchedAlerts.length),
+      });
+
+      emitter.emitQueryExecuted({
+        query: queryString,
+        category: input.category,
+        totalMatches: searchMatches.length,
+      });
+
+      addUniqueAlerts(searchMatches, {
+        input_identifier: raw,
+        input_kind: resolved.kind,
+        resolution_method: resolved.resolution_method,
+        match_confidence: 'keyword',
+      });
+    } else {
+      // Nicht auflösbare Kennungen werden ohne Kosten geloggt und in RUN_SUMMARY festgehalten
+      console.log(`[Actor] Unresolved identifier '${raw}': ${resolved.error || 'Cannot be resolved'}`);
+      unresolved.push(raw);
+    }
+  }
+
+  // 3. Filter nach Woche (sofern maxItems noch nicht erreicht)
   if (input.week && matchedAlerts.length < input.maxItems) {
     let year: number | undefined;
     let weekNumber: number | string = input.week;
@@ -444,7 +581,7 @@ export async function runActor(
     addUniqueAlerts(weeklyMatches);
   }
 
-  // 3. Filter nach Freitext-Suchbegriff, Kategorie oder Kinder-Sicherheitskriterien
+  // 4. Filter nach Freitext-Suchbegriff, Kategorie oder Kinder-Sicherheitskriterien
   if (
     (input.query || input.category || input.childProductsOnly || input.ageGroup || input.hazard) &&
     matchedAlerts.length < input.maxItems
@@ -468,9 +605,10 @@ export async function runActor(
     addUniqueAlerts(searchMatches);
   }
 
-  // 4. Wenn ueberhaupt kein Filter gesetzt wurde: Alle Alerts bis maxItems laden
+  // 5. Wenn ueberhaupt kein Filter gesetzt wurde: Alle Alerts bis maxItems laden
   if (
     eansToProcess.length === 0 &&
+    identifiersToResolve.length === 0 &&
     !input.week &&
     !input.query &&
     !input.category &&
@@ -489,7 +627,7 @@ export async function runActor(
     addUniqueAlerts(defaultMatches);
   }
 
-  // 5. Asynchrone PPE-Charge-Operationen abwarten
+  // 6. Asynchrone PPE-Charge-Operationen abwarten
   if (typeof (emitter as any).waitForPendingCharges === 'function') {
     await (emitter as any).waitForPendingCharges();
   }
@@ -504,15 +642,28 @@ export async function runActor(
     };
   });
 
-  // 6. Apify Dataset Integration: Gefundene Alert-Datensaetze via Actor.pushData() exportieren
+  // 7. Apify Dataset Integration: Gefundene Alert-Datensaetze via Actor.pushData() exportieren
   if (options.pushData !== false) {
     await pushApifyData(datasetItems);
   }
+
+  // 8. RUN_SUMMARY im Key-Value-Store festhalten
+  await setApifyKeyValue(
+    'RUN_SUMMARY',
+    {
+      unresolved,
+      totalItems: matchedAlerts.length,
+      ppeEventsTriggered: emitter.getTotalEvents(),
+      totalCostUsd: emitter.calculateEstimatedCost(),
+    },
+    options.keyValueStore
+  );
 
   return {
     items: matchedAlerts,
     totalCount: matchedAlerts.length,
     invalid_eans: invalidEans,
+    unresolved,
     eventSummary: emitter.getEventCounts(),
     totalCostUsd: emitter.calculateEstimatedCost(),
     ppeEventsTriggered: emitter.getTotalEvents(),

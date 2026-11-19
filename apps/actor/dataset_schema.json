@@ -82,6 +82,22 @@
           "type": "string"
         },
         "description": "Child-specific hazards identified: choking, chemical, magnets."
+      },
+      "input_identifier": {
+        "type": "string",
+        "description": "Original input identifier (EAN, ASIN, or Amazon URL) that matched this alert."
+      },
+      "input_kind": {
+        "type": "string",
+        "description": "Classification kind of the input identifier: gtin, isbn10, asin, or amazon_url."
+      },
+      "resolution_method": {
+        "type": "string",
+        "description": "Resolution method: direct_gtin, isbn10_conversion, csv_mapping, or url_slug_keywords."
+      },
+      "match_confidence": {
+        "type": "string",
+        "description": "Confidence level of match (e.g. 'keyword' for title slug matches)."
       }
     },
     "required": [
