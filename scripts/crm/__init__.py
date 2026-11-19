@@ -65,6 +65,15 @@ from scripts.crm.drafter import (
     get_default_drafter,
     normalize_language_code,
 )
+from scripts.crm.dispatcher import (
+    DispatchResult,
+    EmailDispatcher,
+    UnapprovedDraftError,
+    dispatch_approved_drafts,
+    dispatch_draft,
+    get_default_dispatcher,
+    set_default_dispatcher,
+)
 from scripts.crm.storage import (
     CRMStorage,
     LeadStatus,
@@ -139,4 +148,12 @@ __all__ = [
     "draft_and_enqueue",
     "get_default_drafter",
     "normalize_language_code",
+    # Dispatcher
+    "EmailDispatcher",
+    "DispatchResult",
+    "UnapprovedDraftError",
+    "dispatch_draft",
+    "dispatch_approved_drafts",
+    "get_default_dispatcher",
+    "set_default_dispatcher",
 ]
