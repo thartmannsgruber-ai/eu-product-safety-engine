@@ -1,0 +1,11 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-07-09/server.schema.json",
+  "name": "io.github.thartmannsgruber-ai/eu-product-safety-engine",
+  "description": "EU Safety Gate (RAPEX/GPSR) recall alerts, EAN/GTIN barcode validation and ASIN screening.",
+  "version": "1.0.0",
+  "status": "active",
+  "repository": {
+    "url": "https://github.com/thartmannsgruber-ai/eu-product-safety-engine",
+    "source": "github"
+  }
+}
