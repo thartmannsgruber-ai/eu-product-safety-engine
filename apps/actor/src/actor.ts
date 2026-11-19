@@ -30,6 +30,11 @@ import {
   type BatchReport,
   failActor,
 } from './batch.js';
+import {
+  notifyRunEnd,
+  type WebhookLog,
+  redactSecret,
+} from './notify.js';
 
 /**
  * Helper to normalize strings for alias resolution (empty string -> undefined).
@@ -335,6 +340,9 @@ export interface ActorRunOptions {
   };
   fetcher?: ComplianceFetcher;
   customFetch?: typeof fetch;
+  webhookFetch?: typeof fetch | ((input: any, init?: any) => Promise<any>);
+  webhookSleep?: (ms: number) => Promise<void>;
+  webhookTimeoutMs?: number;
   failActor?: (reason: string) => Promise<void> | void;
 }
 
@@ -347,6 +355,7 @@ export interface ActorRunResult {
   totalCostUsd: number;
   ppeEventsTriggered: number;
   batchReport?: BatchReport;
+  webhookLog?: WebhookLog;
   error?: string;
 }
 
@@ -746,6 +755,32 @@ export async function runActor(
     options.keyValueStore
   );
 
+  // 9. Webhook-Benachrichtigung am Ende des Runs (F10)
+  let webhookLog: WebhookLog | undefined;
+  if (input.webhookUrl) {
+    try {
+      const notifyResult = await notifyRunEnd(input, matchedAlerts, batchReport, {
+        webhookFetch: options.webhookFetch ?? options.customFetch,
+        keyValueStore: options.keyValueStore,
+        sleep: options.webhookSleep,
+        timeoutMs: options.webhookTimeoutMs,
+      });
+      webhookLog = notifyResult.log;
+    } catch (notifyErr: any) {
+      const reason = notifyErr?.message || String(notifyErr);
+      const safeError = redactSecret(reason, input.webhookSecret);
+      console.warn(`[Actor] Unexpected error during webhook dispatch: ${safeError}`);
+      webhookLog = {
+        sent: false,
+        attempts: 0,
+        error: safeError,
+        format: input.webhookFormat ?? 'generic',
+        matchCount: matchedAlerts.length,
+      };
+      await setApifyKeyValue('WEBHOOK_LOG', webhookLog, options.keyValueStore);
+    }
+  }
+
   return {
     items: matchedAlerts,
     totalCount: matchedAlerts.length,
@@ -755,5 +790,6 @@ export async function runActor(
     totalCostUsd: emitter.calculateEstimatedCost(),
     ppeEventsTriggered: emitter.getTotalEvents(),
     batchReport,
+    webhookLog,
   };
 }
