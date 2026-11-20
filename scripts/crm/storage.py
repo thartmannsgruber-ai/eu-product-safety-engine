@@ -17,8 +17,10 @@ Kontaktversuche an geblacklistete Adressen werfen BlacklistedRecipientError.
 
 from __future__ import annotations
 
+import fcntl
 import json
 import os
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -102,12 +104,20 @@ class CRMStorage:
         return self._leads
 
     def save(self) -> None:
-        """Speichert alle Leads atomar in die JSON-Datei."""
+        """Speichert alle Leads atomar in die JSON-Datei (mit Prozess-Lock, unique temp und fsync)."""
         self.filepath.parent.mkdir(parents=True, exist_ok=True)
-        temp_path = self.filepath.with_suffix(".tmp")
-        with open(temp_path, "w", encoding="utf-8") as f:
-            json.dump(self._leads, f, indent=2, ensure_ascii=False)
-        temp_path.replace(self.filepath)
+        lock_path = self.filepath.with_suffix(".lock")
+        with open(lock_path, "w") as lock_fd:
+            fcntl.flock(lock_fd, fcntl.LOCK_EX)
+            try:
+                temp_path = self.filepath.with_suffix(f".tmp.{os.getpid()}.{uuid.uuid4().hex[:8]}")
+                with open(temp_path, "w", encoding="utf-8") as f:
+                    json.dump(self._leads, f, indent=2, ensure_ascii=False)
+                    f.flush()
+                    os.fsync(f.fileno())
+                temp_path.replace(self.filepath)
+            finally:
+                fcntl.flock(lock_fd, fcntl.LOCK_UN)
 
     def init_from_campaign(
         self,

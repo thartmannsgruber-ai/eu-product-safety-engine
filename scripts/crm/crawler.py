@@ -20,6 +20,8 @@ import imaplib
 import json
 import os
 import re
+import time
+import logging
 import unicodedata
 from datetime import datetime, timezone
 from pathlib import Path
@@ -192,6 +194,10 @@ class InboundMailCrawler:
         self.imap_port = int(imap_port or os.environ.get("IMAP_PORT") or env.get("IMAP_PORT", 993))
         self.imap_user = imap_user or os.environ.get("IMAP_USER") or env.get("IMAP_USER") or env.get("SMTP_USER")
         self.imap_pass = imap_pass or os.environ.get("IMAP_PASS") or env.get("IMAP_PASS") or env.get("SMTP_PASS")
+
+        # Microsoft Graph Token Cache (TTL-gepuffert)
+        self._graph_token: Optional[str] = None
+        self._graph_token_expires_at: float = 0.0
 
     # -----------------------------------------------------------------------
     # State Management & Deduplication
@@ -575,13 +581,22 @@ class InboundMailCrawler:
                 "safety gate", "rapex", "produktsicherheit", "sécurité", "securite", "veiligheid", 
                 "gtin", "spielwaren", "jouet", "speelgoed", "compliance", "rückruf", "ruckruf", "rappel"
             ])
-            # F-04: Goldene Regel absichern - Opt-Out-Signalwoerter (multilingual inkl. Apostroph-Varianten) nie als unrelated verwerfen
-            has_optout_keywords = any(kw in subject_raw or kw in body_raw for kw in [
-                "nein", "kein interesse", "kein bedarf", "nicht mehr kontaktieren", "austragen", "abmelden",
-                "stop", "unsubscribe", "remove", "pas d'intérêt", "pas d'interet", "non merci", "désinscrire", "desinscrire",
-                "geen interesse", "nee", "niet geïnteresseerd", "niet geinteresseerd", "afmelden", "uitschrijven"
-            ])
-            # Bei ungematchten Absendern gelten Opt-Out-Keywords nur, wenn es sich nachweisbar um eine Antwort handelt
+            # F-01 FIX (Herznieren): Goldene Regel - Echte menschliche Opt-Out-Phrasen
+            # fuehren IMMER zur Intent-Klassifikation und Blacklistierung, selbst wenn kein Re-Header vorliegt!
+            human_optout_phrases = [
+                "kein interesse", "kein bedarf", "nicht mehr kontaktieren", "austragen",
+                "pas d'intérêt", "pas d'interet", "non merci", "geen interesse",
+                "niet geïnteresseerd", "niet geinteresseerd", "nein danke", "nee bedankt"
+            ]
+            has_human_optout = any(phrase in subject_raw or phrase in body_raw for phrase in human_optout_phrases)
+
+            # Generische Opt-Out-Keywords (die auch in Dritt-Newslettern vorkommen) erfordern Reply-Bezug
+            generic_optout_keywords = [
+                "nein", "abmelden", "stop", "unsubscribe", "remove", "désinscrire", "desinscrire",
+                "afmelden", "uitschrijven", "nee"
+            ]
+            has_generic_optout = any(kw in subject_raw or kw in body_raw for kw in generic_optout_keywords)
+
             is_reply = bool(
                 parsed.get("in_reply_to") 
                 or parsed.get("references") 
@@ -591,8 +606,8 @@ class InboundMailCrawler:
                 ))
             )
 
-            # Falls weder relevante Keywords noch (Opt-Outs in echter Antwort) -> als unbeteiligte Mail ignorieren
-            if not has_campaign_keywords and not (has_optout_keywords and is_reply):
+            # Falls weder Kampagnen-Keywords noch Opt-Outs (menschlich oder generisch mit Reply) vorliegen -> ignorieren
+            if not has_campaign_keywords and not (has_human_optout or (has_generic_optout and is_reply)):
                 self.mark_processed(msg_id, details={"status": "IGNORED_UNRELATED", "from": parsed["from_email"]})
                 return {
                     "status": "IGNORED_UNRELATED",
@@ -791,10 +806,17 @@ class InboundMailCrawler:
 
         return results
 
-    def get_graph_token(self) -> str:
-        """Holt ein OAuth2 Access Token fuer Microsoft Graph via client_credentials."""
+    def get_graph_token(self, force_refresh: bool = False) -> str:
+        """
+        Holt ein OAuth2 Access Token fuer Microsoft Graph via client_credentials.
+        Cached das Token im Arbeitsspeicher mit 300s Sicherheits-Puffer gegen Ablauf.
+        """
         import urllib.request
         import urllib.parse
+        now = time.time()
+        if not force_refresh and self._graph_token and now < self._graph_token_expires_at:
+            return self._graph_token
+
         env = load_env_crawler()
         tenant_id = os.environ.get("MS_GRAPH_TENANT_ID") or env.get("MS_GRAPH_TENANT_ID")
         client_id = os.environ.get("MS_GRAPH_CLIENT_ID") or env.get("MS_GRAPH_CLIENT_ID")
@@ -816,18 +838,26 @@ class InboundMailCrawler:
         req = urllib.request.Request(token_url, data=data, headers={"Content-Type": "application/x-www-form-urlencoded"})
         with urllib.request.urlopen(req, timeout=10) as resp:
             token_data = json.loads(resp.read().decode("utf-8"))
-            return token_data["access_token"]
+            access_token = token_data["access_token"]
+            expires_in = float(token_data.get("expires_in", 3600))
+            self._graph_token = access_token
+            self._graph_token_expires_at = now + expires_in - 300  # 5 Minuten Puffer
+            return access_token
 
     def crawl_graph(
         self,
         mailbox: Optional[str] = None,
         folders: Optional[List[str]] = None,
         limit: int = 50,
+        max_pages_per_folder: int = 10,
     ) -> List[Dict[str, Any]]:
         """
         Liest Inbound-Mails ueber die Microsoft Graph API fuer das angegebene Postfach (z. B. info@thfc-consulting.de).
         Scannt standardmaessig Posteingang (inbox) und Junk-E-Mail (junkemail).
-        Verarbeitet und dedupliziert alle Nachrichten automatisch.
+        - Verfolgt @odata.nextLink Paging bis zu max_pages_per_folder (F-02).
+        - Selektiert und parst internetMessageHeaders fuer Newsletter- und Auto-Reply-Filter (F-04).
+        - Auto-Retry bei abgelaufenem Token (401) mitten im Scan.
+        - Verarbeitet und dedupliziert alle Nachrichten automatisch.
         """
         import urllib.request
         env = load_env_crawler()
@@ -843,43 +873,73 @@ class InboundMailCrawler:
         results: List[Dict[str, Any]] = []
 
         for folder in scan_folders:
-            graph_url = f"https://graph.microsoft.com/v1.0/users/{target_mailbox}/mailFolders/{folder}/messages?$top={limit}&$select=id,internetMessageId,subject,from,toRecipients,ccRecipients,body,bodyPreview,receivedDateTime,conversationId,isRead,hasAttachments&$orderby=receivedDateTime%20desc"
-            req = urllib.request.Request(graph_url, headers=headers)
-            try:
-                with urllib.request.urlopen(req, timeout=15) as resp:
-                    data = json.loads(resp.read().decode("utf-8"))
-                    messages = data.get("value", [])
-                    for msg in messages:
-                        from_email = msg.get("from", {}).get("emailAddress", {}).get("address", "")
-                        from_name = msg.get("from", {}).get("emailAddress", {}).get("name", "")
-                        from_raw = f"{from_name} <{from_email}>" if from_name else from_email
-                        
-                        to_list = [r.get("emailAddress", {}).get("address", "") for r in msg.get("toRecipients", [])]
-                        to_str = ", ".join(to_list)
+            graph_url = f"https://graph.microsoft.com/v1.0/users/{target_mailbox}/mailFolders/{folder}/messages?$top={limit}&$select=id,internetMessageId,subject,from,toRecipients,ccRecipients,body,bodyPreview,receivedDateTime,conversationId,isRead,hasAttachments,internetMessageHeaders&$orderby=receivedDateTime%20desc"
+            pages = 0
+            retried_auth = False
 
-                        # Body ermitteln
-                        body_content = msg.get("body", {}).get("content", "")
-                        if msg.get("body", {}).get("contentType", "").lower() == "html":
-                            body_content = re.sub(r"<[^>]+>", " ", body_content)
-                        if not body_content:
-                            body_content = msg.get("bodyPreview", "")
+            while graph_url and pages < max_pages_per_folder:
+                req = urllib.request.Request(graph_url, headers=headers)
+                try:
+                    with urllib.request.urlopen(req, timeout=15) as resp:
+                        data = json.loads(resp.read().decode("utf-8"))
+                        messages = data.get("value", [])
+                        for msg in messages:
+                            from_email = msg.get("from", {}).get("emailAddress", {}).get("address", "")
+                            from_name = msg.get("from", {}).get("emailAddress", {}).get("name", "")
+                            from_raw = f"{from_name} <{from_email}>" if from_name else from_email
+                            
+                            to_list = [r.get("emailAddress", {}).get("address", "") for r in msg.get("toRecipients", [])]
+                            to_str = ", ".join(to_list)
 
-                        msg_dict = {
-                            "from": from_raw,
-                            "to": to_str,
-                            "subject": msg.get("subject", ""),
-                            "body": body_content,
-                            "message_id": msg.get("internetMessageId") or msg.get("id"),
-                            "date": msg.get("receivedDateTime"),
-                            "graph_id": msg.get("id"),
-                            "conversation_id": msg.get("conversationId")
-                        }
+                            # Body ermitteln
+                            body_content = msg.get("body", {}).get("content", "")
+                            if msg.get("body", {}).get("contentType", "").lower() == "html":
+                                body_content = re.sub(r"<[^>]+>", " ", body_content)
+                            if not body_content:
+                                body_content = msg.get("bodyPreview", "")
 
-                        res = self.process_message(msg_dict)
-                        results.append(res)
-            except Exception as e:
-                # Ordner-Fehler loggen, aber mit naechstem Ordner fortfahren
-                pass
+                            # F-04: internetMessageHeaders extrahieren
+                            headers_list = msg.get("internetMessageHeaders") or []
+                            header_map: Dict[str, str] = {}
+                            if isinstance(headers_list, list):
+                                for h in headers_list:
+                                    if isinstance(h, dict) and "name" in h:
+                                        header_map[str(h.get("name", "")).lower()] = str(h.get("value", "")).strip()
+
+                            msg_dict = {
+                                "from": from_raw,
+                                "to": to_str,
+                                "subject": msg.get("subject", ""),
+                                "body": body_content,
+                                "message_id": msg.get("internetMessageId") or msg.get("id"),
+                                "date": msg.get("receivedDateTime"),
+                                "graph_id": msg.get("id"),
+                                "conversation_id": msg.get("conversationId"),
+                                "list_unsubscribe": header_map.get("list-unsubscribe", ""),
+                                "list_unsubscribe_post": header_map.get("list-unsubscribe-post", ""),
+                                "precedence": header_map.get("precedence", ""),
+                                "auto_submitted": header_map.get("auto-submitted", ""),
+                            }
+
+                            res = self.process_message(msg_dict)
+                            results.append(res)
+
+                        # F-02: NextLink Paging
+                        graph_url = data.get("@odata.nextLink")
+                        pages += 1
+
+                except urllib.error.HTTPError as he:
+                    if he.code == 401 and not retried_auth:
+                        # Token abgelaufen -> einmal Refresh und Retry
+                        token = self.get_graph_token(force_refresh=True)
+                        headers["Authorization"] = f"Bearer {token}"
+                        retried_auth = True
+                        continue
+                    logging.getLogger("CRM.Crawler").warning(f"[GraphCrawler] HTTP Error {he.code} bei Ordner {folder}: {he}")
+                    break
+                except Exception as e:
+                    logging.getLogger("CRM.Crawler").warning(f"[GraphCrawler] Fehler beim Scannen von {folder}: {e}")
+                    break
 
         return results
 
@@ -893,7 +953,8 @@ class InboundMailCrawler:
         """
         Haupt-Einstiegspunkt des Crawlers:
         - Falls mock_messages uebergeben wurden, wird crawl_mock genutzt.
-        - Falls CRM_MAIL_SOURCE == 'graph' oder Graph-Credentials vorhanden, wird crawl_graph genutzt.
+        - Falls CRM_MAIL_SOURCE == 'graph': Fail-Closed Pruefung und crawl_graph.
+        - Falls Graph-Credentials vorliegen: crawl_graph.
         - Andernfalls Fallback auf crawl_imap.
         """
         if mock_messages is not None:
@@ -901,7 +962,11 @@ class InboundMailCrawler:
 
         env = load_env_crawler()
         source = os.environ.get("CRM_MAIL_SOURCE") or env.get("CRM_MAIL_SOURCE")
-        if source == "graph" or (env.get("MS_GRAPH_TENANT_ID") and env.get("MS_GRAPH_CLIENT_ID") and env.get("MS_GRAPH_CLIENT_SECRET")):
+        if source == "graph":
+            if not (env.get("MS_GRAPH_TENANT_ID") and env.get("MS_GRAPH_CLIENT_ID") and env.get("MS_GRAPH_CLIENT_SECRET")):
+                raise ValueError("CRM_MAIL_SOURCE=graph konfiguriert, aber Microsoft Graph Zugangsdaten sind unvollstaendig!")
+            return self.crawl_graph()
+        elif env.get("MS_GRAPH_TENANT_ID") and env.get("MS_GRAPH_CLIENT_ID") and env.get("MS_GRAPH_CLIENT_SECRET"):
             return self.crawl_graph()
 
         return self.crawl_imap(folder=folder, unread_only=unread_only, mark_seen=mark_seen)

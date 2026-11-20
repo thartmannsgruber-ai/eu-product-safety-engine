@@ -11,6 +11,7 @@ Jeglicher weiterer Kontaktversuch wirft BlacklistedRecipientError.
 
 from __future__ import annotations
 
+import fcntl
 import json
 import os
 import uuid
@@ -97,27 +98,34 @@ class BlacklistManager:
         return self._entries
 
     def save(self) -> None:
-        """Speichert die Blacklist atomar in die JSON-Datei (mit Re-Merge und unique temp)."""
+        """Speichert die Blacklist atomar in die JSON-Datei (mit Prozess-Lock, Re-Merge und fsync)."""
         self.filepath.parent.mkdir(parents=True, exist_ok=True)
-        # Disk-Merge: Vor dem Schreiben frische Eintraege von der Platte zusammenfuehren
-        if self.filepath.exists():
+        lock_path = self.filepath.with_suffix(".lock")
+        with open(lock_path, "w") as lock_fd:
+            fcntl.flock(lock_fd, fcntl.LOCK_EX)
             try:
-                with open(self.filepath, "r", encoding="utf-8") as f:
-                    disk_data = json.load(f)
-                if isinstance(disk_data, dict):
-                    for k, v in disk_data.items():
-                        norm_k = normalize_email(k)
-                        if norm_k not in self._entries:
-                            self._entries[norm_k] = v
-            except Exception:
-                pass
+                # Disk-Merge: Vor dem Schreiben frische Eintraege von der Platte zusammenfuehren
+                if self.filepath.exists():
+                    try:
+                        with open(self.filepath, "r", encoding="utf-8") as f:
+                            disk_data = json.load(f)
+                        if isinstance(disk_data, dict):
+                            for k, v in disk_data.items():
+                                norm_k = normalize_email(k)
+                                if norm_k not in self._entries:
+                                    self._entries[norm_k] = v
+                    except Exception:
+                        pass
 
-        import uuid
-        temp_path = self.filepath.with_suffix(f".tmp.{os.getpid()}.{uuid.uuid4().hex[:8]}")
-        with open(temp_path, "w", encoding="utf-8") as f:
-            json.dump(self._entries, f, indent=2, ensure_ascii=False)
-        temp_path.replace(self.filepath)
-        self._load_error = False
+                temp_path = self.filepath.with_suffix(f".tmp.{os.getpid()}.{uuid.uuid4().hex[:8]}")
+                with open(temp_path, "w", encoding="utf-8") as f:
+                    json.dump(self._entries, f, indent=2, ensure_ascii=False)
+                    f.flush()
+                    os.fsync(f.fileno())
+                temp_path.replace(self.filepath)
+                self._load_error = False
+            finally:
+                fcntl.flock(lock_fd, fcntl.LOCK_UN)
 
     def is_blacklisted(self, email: str) -> bool:
         """Liefert True fuer gelistete Adressen, sonst False."""
@@ -151,19 +159,27 @@ class BlacklistManager:
         return entry
 
     def remove_from_blacklist(self, email: str) -> bool:
-        """Entfernt eine E-Mail (fuer Tests oder manuelle Korrektur)."""
+        """Entfernt eine E-Mail (fuer Tests oder manuelle Korrektur, mit Prozess-Lock und fsync)."""
         norm_email = normalize_email(email)
-        self.load()
-        if norm_email in self._entries:
-            del self._entries[norm_email]
-            self.filepath.parent.mkdir(parents=True, exist_ok=True)
-            temp_path = self.filepath.with_suffix(f".tmp.{os.getpid()}.{uuid.uuid4().hex[:8]}")
-            with open(temp_path, "w", encoding="utf-8") as f:
-                json.dump(self._entries, f, indent=2, ensure_ascii=False)
-            temp_path.replace(self.filepath)
-            self._load_error = False
-            return True
-        return False
+        self.filepath.parent.mkdir(parents=True, exist_ok=True)
+        lock_path = self.filepath.with_suffix(".lock")
+        with open(lock_path, "w") as lock_fd:
+            fcntl.flock(lock_fd, fcntl.LOCK_EX)
+            try:
+                self.load()
+                if norm_email in self._entries:
+                    del self._entries[norm_email]
+                    temp_path = self.filepath.with_suffix(f".tmp.{os.getpid()}.{uuid.uuid4().hex[:8]}")
+                    with open(temp_path, "w", encoding="utf-8") as f:
+                        json.dump(self._entries, f, indent=2, ensure_ascii=False)
+                        f.flush()
+                        os.fsync(f.fileno())
+                    temp_path.replace(self.filepath)
+                    self._load_error = False
+                    return True
+                return False
+            finally:
+                fcntl.flock(lock_fd, fcntl.LOCK_UN)
 
     def can_contact(self, email: str) -> bool:
         """

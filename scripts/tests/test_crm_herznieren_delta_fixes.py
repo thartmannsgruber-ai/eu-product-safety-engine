@@ -364,6 +364,210 @@ class TestHerznierenDeltaFixes(unittest.TestCase):
         self.assertFalse(res.get("skipped", False))
         self.assertTrue(blacklist.is_blacklisted("geschaeftsfuehrung@spielwaren-karl.de"))
 
+    # -----------------------------------------------------------------------
+    # Herznieren Lauf 2 (2026-11-20): F-01 bis F-05 Tests
+    # -----------------------------------------------------------------------
+
+    def test_optout_from_unmatched_sender_without_reply_headers_or_re_prefix(self):
+        """F-01: Absage von ungematchter Adresse OHNE In-Reply-To und OHNE Re:-Präfix MUSS geblacklistet werden."""
+        storage = CRMStorage(leads_file=self.leads_file)
+        blacklist = BlacklistManager(blacklist_file=self.blacklist_file)
+
+        crawler = InboundMailCrawler(
+            storage=storage,
+            blacklist_mgr=blacklist,
+            state_file=self.state_file,
+            auto_draft=False,
+        )
+
+        # Neuer Thread, Betreff "Abmeldung", keine RFC-Reply-Header
+        msg = {
+            "from": "vorstand@spielwaren-grosshandel.de",
+            "to": "info@thfc-consulting.de",
+            "subject": "Abmeldung und Widerruf",
+            "body": "Guten Tag,\nbitte tragen Sie unsere Adresse sofort aus. Wir haben kein Interesse an Ihren Angeboten.\nDanke.",
+            "message_id": "<new-thread-unsub-101@spielwaren-grosshandel.de>",
+        }
+
+        res = crawler.process_message(msg)
+        self.assertEqual(res["status"], "PROCESSED")
+        self.assertFalse(res.get("skipped", False))
+        self.assertEqual(res["intent"], "NEGATIVE_OPTOUT")
+        self.assertTrue(blacklist.is_blacklisted("vorstand@spielwaren-grosshandel.de"))
+
+    def test_graph_crawler_paginates_nextlink(self):
+        """F-02: crawl_graph muss @odata.nextLink verfolgen und alle paginierten Seiten abrufen."""
+        crawler = InboundMailCrawler(
+            storage=CRMStorage(leads_file=self.leads_file),
+            blacklist_mgr=BlacklistManager(blacklist_file=self.blacklist_file),
+            state_file=self.state_file,
+            auto_draft=False,
+        )
+        crawler.telegram_bot = MagicMock()
+
+        page1_response = {
+            "value": [
+                {
+                    "id": "msg_page1_01",
+                    "internetMessageId": "<p1_01@test.com>",
+                    "subject": "Test P1",
+                    "from": {"emailAddress": {"address": "lead1@test.com", "name": "Lead 1"}},
+                    "toRecipients": [{"emailAddress": {"address": "info@thfc-consulting.de"}}],
+                    "body": {"contentType": "text", "content": "Kein Interesse mehr bitte austragen."},
+                    "receivedDateTime": "2026-11-20T12:00:00Z"
+                }
+            ],
+            "@odata.nextLink": "https://graph.microsoft.com/v1.0/users/info@thfc-consulting.de/mailFolders/inbox/messages?$top=50&$skip=1"
+        }
+
+        page2_response = {
+            "value": [
+                {
+                    "id": "msg_page2_01",
+                    "internetMessageId": "<p2_01@test.com>",
+                    "subject": "Test P2",
+                    "from": {"emailAddress": {"address": "lead2@test.com", "name": "Lead 2"}},
+                    "toRecipients": [{"emailAddress": {"address": "info@thfc-consulting.de"}}],
+                    "body": {"contentType": "text", "content": "Nee bedankt geen interesse."},
+                    "receivedDateTime": "2026-11-20T11:59:00Z"
+                }
+            ]
+            # Kein nextLink -> Ende der Pagination
+        }
+
+        with patch.object(crawler, "get_graph_token", return_value="dummy_graph_token"), \
+             patch("scripts.crm.telegram_bot.get_default_bot"), \
+             patch("urllib.request.urlopen") as mock_urlopen:
+                mock_resp1 = MagicMock()
+                mock_resp1.read.return_value = json.dumps(page1_response).encode("utf-8")
+                mock_resp1.__enter__.return_value = mock_resp1
+
+                mock_resp2 = MagicMock()
+                mock_resp2.read.return_value = json.dumps(page2_response).encode("utf-8")
+                mock_resp2.__enter__.return_value = mock_resp2
+
+                mock_urlopen.side_effect = [mock_resp1, mock_resp2]
+
+                results = crawler.crawl_graph(mailbox="info@thfc-consulting.de", folders=["inbox"])
+                self.assertEqual(len(results), 2)
+                self.assertEqual(results[0]["message_id"], "p1_01@test.com")
+                self.assertEqual(results[1]["message_id"], "p2_01@test.com")
+                self.assertEqual(mock_urlopen.call_count, 2)
+
+    def test_graph_crawler_fetches_and_extracts_internet_message_headers(self):
+        """F-04: crawl_graph muss internetMessageHeaders parsen und fuer Newsletter-Filter bereitstellen."""
+        blacklist = BlacklistManager(blacklist_file=self.blacklist_file)
+        crawler = InboundMailCrawler(
+            storage=CRMStorage(leads_file=self.leads_file),
+            blacklist_mgr=blacklist,
+            state_file=self.state_file,
+            auto_draft=False,
+        )
+
+        graph_response = {
+            "value": [
+                {
+                    "id": "msg_newsletter_graph",
+                    "internetMessageId": "<nl_graph_01@marketing.com>",
+                    "subject": "Unser monatlicher Newsletter",
+                    "from": {"emailAddress": {"address": "marketing@saas-tool.com", "name": "SaaS Marketing"}},
+                    "toRecipients": [{"emailAddress": {"address": "info@thfc-consulting.de"}}],
+                    "body": {"contentType": "text", "content": "Hier abmelden wenn Sie keine E-Mails moechten: unsubscribe"},
+                    "receivedDateTime": "2026-11-20T10:00:00Z",
+                    "internetMessageHeaders": [
+                        {"name": "List-Unsubscribe", "value": "<https://saas-tool.com/unsub>"},
+                        {"name": "Precedence", "value": "bulk"}
+                    ]
+                }
+            ]
+        }
+
+        with patch.object(crawler, "get_graph_token", return_value="dummy_graph_token"):
+            with patch("urllib.request.urlopen") as mock_urlopen:
+                mock_resp = MagicMock()
+                mock_resp.read.return_value = json.dumps(graph_response).encode("utf-8")
+                mock_resp.__enter__.return_value = mock_resp
+                mock_urlopen.return_value = mock_resp
+
+                results = crawler.crawl_graph(mailbox="info@thfc-consulting.de", folders=["inbox"])
+                self.assertEqual(len(results), 1)
+                self.assertEqual(results[0]["status"], "IGNORED_AUTOMATED")
+                self.assertTrue(results[0].get("skipped", False))
+                self.assertFalse(blacklist.is_blacklisted("marketing@saas-tool.com"))
+
+    def test_graph_crawler_token_caching_and_refresh(self):
+        """F-05: get_graph_token cached den Bearer-Token und refreshed ihn nach Ablauf."""
+        crawler = InboundMailCrawler(
+            storage=CRMStorage(leads_file=self.leads_file),
+            blacklist_mgr=BlacklistManager(blacklist_file=self.blacklist_file),
+            state_file=self.state_file,
+        )
+
+        with patch("scripts.crm.crawler.load_env_crawler", return_value={
+            "MS_GRAPH_TENANT_ID": "dummy_tid",
+            "MS_GRAPH_CLIENT_ID": "dummy_cid",
+            "MS_GRAPH_CLIENT_SECRET": "dummy_sec"
+        }):
+            with patch("urllib.request.urlopen") as mock_urlopen:
+                mock_resp1 = MagicMock()
+                mock_resp1.read.return_value = json.dumps({
+                    "access_token": "token_alpha",
+                    "expires_in": 3600
+                }).encode("utf-8")
+                mock_resp1.__enter__.return_value = mock_resp1
+
+                mock_urlopen.return_value = mock_resp1
+
+                # Erster Aufruf -> API Request
+                t1 = crawler.get_graph_token()
+                self.assertEqual(t1, "token_alpha")
+                self.assertEqual(mock_urlopen.call_count, 1)
+
+                # Zweiter Aufruf -> Cache Hit (kein API Request!)
+                t2 = crawler.get_graph_token()
+                self.assertEqual(t2, "token_alpha")
+                self.assertEqual(mock_urlopen.call_count, 1)
+
+                # Erzwinge Refresh
+                mock_resp2 = MagicMock()
+                mock_resp2.read.return_value = json.dumps({
+                    "access_token": "token_beta",
+                    "expires_in": 3600
+                }).encode("utf-8")
+                mock_resp2.__enter__.return_value = mock_resp2
+                mock_urlopen.return_value = mock_resp2
+
+                t3 = crawler.get_graph_token(force_refresh=True)
+                self.assertEqual(t3, "token_beta")
+                self.assertEqual(mock_urlopen.call_count, 2)
+
+    def test_blacklist_file_locking_concurrency(self):
+        """F-03: BlacklistManager nutzt fcntl.flock beim Speichern und Entfernen."""
+        blacklist = BlacklistManager(blacklist_file=self.blacklist_file)
+        blacklist.add_to_blacklist("concurrent1@test.com", reason="Opt-Out")
+        self.assertTrue(blacklist.is_blacklisted("concurrent1@test.com"))
+
+        # Lockfile muss existieren
+        lockfile = self.blacklist_file.with_suffix(".lock")
+        self.assertTrue(lockfile.exists())
+
+        # Entfernen ebenfalls unter Lock
+        removed = blacklist.remove_from_blacklist("concurrent1@test.com")
+        self.assertTrue(removed)
+        self.assertFalse(blacklist.is_blacklisted("concurrent1@test.com"))
+
+    def test_storage_file_locking_concurrency(self):
+        """F-03: CRMStorage nutzt fcntl.flock beim Speichern."""
+        storage = CRMStorage(leads_file=self.leads_file)
+        storage.update_lead_status("lead_lock@test.com", "OUTREACH_SENT", reason="Init")
+        lead = storage.get_lead("lead_lock@test.com")
+        self.assertIsNotNone(lead)
+        self.assertEqual(lead["status"], "OUTREACH_SENT")
+
+        # Lockfile muss existieren
+        lockfile = self.leads_file.with_suffix(".lock")
+        self.assertTrue(lockfile.exists())
+
 
 if __name__ == "__main__":
     unittest.main()

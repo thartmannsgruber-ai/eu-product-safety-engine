@@ -388,15 +388,15 @@ def cmd_blacklist(args: argparse.Namespace) -> int:
 
 
 def cmd_scan(args: argparse.Namespace) -> int:
-    """Scannt das Postfach via IMAP nach neuen Inbound-Mails."""
+    """Scannt das Postfach via Microsoft Graph oder IMAP nach neuen Inbound-Mails."""
     folder = getattr(args, "folder", "INBOX") or "INBOX"
     unread_only = not getattr(args, "all", False)
 
     try:
         from scripts.crm.crawler import InboundMailCrawler
         crawler = InboundMailCrawler()
-        print(f"\n[SCAN] Scanning mailbox folder '{folder}' (Unread only: {unread_only})...")
-        results = crawler.crawl_imap(folder=folder, unread_only=unread_only)
+        print(f"\n[SCAN] Scanning mailbox (Folder: '{folder}', Unread only: {unread_only})...")
+        results = crawler.crawl(folder=folder, unread_only=unread_only)
         print(f"[SUCCESS] Scan completed. Processed {len(results)} inbound messages.\n")
         return 0
     except ValueError as ve:
