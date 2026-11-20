@@ -217,10 +217,10 @@ class TestHerznierenDeltaFixes(unittest.TestCase):
             auto_draft=False,
         )
 
-        # E-Mail von unbekannter Adresse, die einfach nur "Nein danke, bitte löschen" schreibt
+        # E-Mail von unbekannter Adresse an info@thfc-consulting.de, die einfach nur "Nein danke, bitte löschen" schreibt
         msg = {
             "from": "unbekannter_lead@firma.de",
-            "to": "t.hartmannsgruber@googlemail.com",
+            "to": "info@thfc-consulting.de",
             "subject": "Antwort auf Ihre Nachricht",
             "body": "Nein, wir haben absolut kein Interesse. Bitte löschen Sie uns.",
             "message_id": "<optout-no-keywords-01@firma.de>",
@@ -289,7 +289,7 @@ class TestHerznierenDeltaFixes(unittest.TestCase):
         self.assertFalse(blacklist.is_blacklisted("no-reply@news.doctolib.com"))
 
     def test_generic_cold_newsletter_without_rfc_headers_dropped_as_unrelated(self):
-        """Unverlangter Newsletter an Privatadresse ohne Re-Bezug wird als IGNORED_UNRELATED verworfen."""
+        """Unverlangter Newsletter an THFC-Adresse ohne Re-Bezug wird als IGNORED_UNRELATED verworfen."""
         storage = CRMStorage(leads_file=self.leads_file)
         blacklist = BlacklistManager(blacklist_file=self.blacklist_file)
 
@@ -302,7 +302,7 @@ class TestHerznierenDeltaFixes(unittest.TestCase):
 
         msg = {
             "from": "angebote@mode-boutique.de",
-            "to": "t.hartmannsgruber@googlemail.com",
+            "to": "info@thfc-consulting.de",
             "subject": "Herbstmode 2026 jetzt reduziert",
             "body": "Entdecken Sie neue Trends.\nKlicken Sie hier zum Abmelden.",
             "message_id": "<cold-newsletter-99@mode-boutique.de>",
@@ -312,6 +312,31 @@ class TestHerznierenDeltaFixes(unittest.TestCase):
         self.assertEqual(res["status"], "IGNORED_UNRELATED")
         self.assertTrue(res.get("skipped", False))
         self.assertFalse(blacklist.is_blacklisted("angebote@mode-boutique.de"))
+
+    def test_hard_gate_drops_any_mail_without_thfc_domain_immediately(self):
+        """Hard-Gate: Jede Mail an fremde Domains (z.B. @googlemail.com) wird sofort als IGNORED_FOREIGN_DOMAIN verworfen."""
+        storage = CRMStorage(leads_file=self.leads_file)
+        blacklist = BlacklistManager(blacklist_file=self.blacklist_file)
+
+        crawler = InboundMailCrawler(
+            storage=storage,
+            blacklist_mgr=blacklist,
+            state_file=self.state_file,
+            auto_draft=False,
+        )
+
+        msg = {
+            "from": "rechnung@telekom.de",
+            "to": "t.hartmannsgruber@googlemail.com",
+            "subject": "Ihre Rechnung für November 2026",
+            "body": "Guten Tag Herr Hartmannsgruber, anbei Ihre Rechnung.",
+            "message_id": "<telekom-invoice-123@telekom.de>",
+        }
+
+        res = crawler.process_message(msg)
+        self.assertEqual(res["status"], "IGNORED_FOREIGN_DOMAIN")
+        self.assertTrue(res.get("skipped", False))
+        self.assertFalse(blacklist.is_blacklisted("rechnung@telekom.de"))
 
     def test_legitimate_optout_reply_from_alternate_address_is_blacklisted(self):
         """Echte Absage-Antwort von alternativer Firmenadresse auf Kampagne wird verarbeitet & geblacklistet."""

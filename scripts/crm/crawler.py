@@ -275,6 +275,11 @@ class InboundMailCrawler:
             message_id = raw_input.get("message_id") or raw_input.get("Message-ID") or ""
             date_str = raw_input.get("date") or datetime.now(timezone.utc).isoformat()
             to_raw = raw_input.get("to") or raw_input.get("To") or ""
+            cc_raw = raw_input.get("cc") or raw_input.get("Cc") or ""
+            delivered_to = raw_input.get("delivered_to") or raw_input.get("Delivered-To") or ""
+            x_original_to = raw_input.get("x_original_to") or raw_input.get("X-Original-To") or ""
+            x_forwarded_for = raw_input.get("x_forwarded_for") or raw_input.get("X-Forwarded-For") or ""
+            x_forwarded_to = raw_input.get("x_forwarded_to") or raw_input.get("X-Forwarded-To") or ""
             list_unsub = raw_input.get("list_unsubscribe") or raw_input.get("List-Unsubscribe") or ""
             list_unsub_post = raw_input.get("list_unsubscribe_post") or raw_input.get("List-Unsubscribe-Post") or ""
             precedence = raw_input.get("precedence") or raw_input.get("Precedence") or ""
@@ -288,6 +293,11 @@ class InboundMailCrawler:
                 "from_email": normalize_email(sender_email),
                 "from_raw": sender,
                 "to": str(to_raw),
+                "cc": str(cc_raw),
+                "delivered_to": str(delivered_to),
+                "x_original_to": str(x_original_to),
+                "x_forwarded_for": str(x_forwarded_for),
+                "x_forwarded_to": str(x_forwarded_to),
                 "subject": subj,
                 "body": body,
                 "in_reply_to": in_reply_to.strip("<> ").strip(),
@@ -315,6 +325,11 @@ class InboundMailCrawler:
             sender_email = from_hdr.strip()
 
         to_hdr = decode_mime_header(msg.get("To", ""))
+        cc_hdr = decode_mime_header(msg.get("Cc", ""))
+        delivered_to = decode_mime_header(msg.get("Delivered-To", ""))
+        x_original_to = decode_mime_header(msg.get("X-Original-To", ""))
+        x_forwarded_for = decode_mime_header(msg.get("X-Forwarded-For", ""))
+        x_forwarded_to = decode_mime_header(msg.get("X-Forwarded-To", ""))
         subject = decode_mime_header(msg.get("Subject", ""))
         body = extract_message_body(msg)
         in_reply_to = decode_mime_header(msg.get("In-Reply-To", "")).strip("<> ")
@@ -334,6 +349,11 @@ class InboundMailCrawler:
             "from_email": normalize_email(sender_email),
             "from_raw": from_hdr,
             "to": to_hdr,
+            "cc": cc_hdr,
+            "delivered_to": delivered_to,
+            "x_original_to": x_original_to,
+            "x_forwarded_for": x_forwarded_for,
+            "x_forwarded_to": x_forwarded_to,
             "subject": subject,
             "body": body,
             "in_reply_to": in_reply_to,
@@ -345,6 +365,23 @@ class InboundMailCrawler:
             "precedence": precedence,
             "auto_submitted": auto_submitted,
         }
+
+    @staticmethod
+    def has_thfc_domain(parsed: Dict[str, Any]) -> bool:
+        """
+        Prueft, ob thfc-consulting.de in To, Cc, Delivered-To oder Weiterleitungs-Headern vorkommt.
+        Strikte Domain-Isolation fuer Sammel- und Weiterleitungspostfaecher.
+        """
+        all_recipients = " ".join([
+            str(parsed.get("to") or ""),
+            str(parsed.get("cc") or ""),
+            str(parsed.get("delivered_to") or ""),
+            str(parsed.get("x_original_to") or ""),
+            str(parsed.get("x_forwarded_for") or ""),
+            str(parsed.get("x_forwarded_to") or ""),
+            str(parsed.get("from_raw") or ""),
+        ]).lower()
+        return "thfc-consulting.de" in all_recipients
 
     @staticmethod
     def is_automated_or_newsletter(parsed: Dict[str, Any]) -> bool:
@@ -511,15 +548,29 @@ class InboundMailCrawler:
         )
         target_email = lead_email or parsed["from_email"]
 
-        # Relevanz-Pruefung fuer Sammelpostfaecher:
-        # Falls kein bekannter Kampagnen-Lead gematcht wurde, pruefen ob Nachricht Kampagnen-Bezug hat
+        # 2b. STRIKTES DOMAIN HARD-GATE:
+        # Falls die Mail NICHT von einem bekannten Kampagnen-Lead stammt,
+        # MUSS zwingend thfc-consulting.de als Empfaenger, Weiterleitung oder Absender vorliegen.
+        # Saemtliche Mails an private Adressen (z.B. @googlemail.com) werden sofort verworfen.
+        if not lead_obj and not self.has_thfc_domain(parsed):
+            self.mark_processed(msg_id, details={
+                "status": "IGNORED_FOREIGN_DOMAIN",
+                "from": parsed["from_email"],
+                "to": parsed.get("to", ""),
+                "reason": "Hard-Gate: Keine thfc-consulting.de Domain in Empfaenger- oder Weiterleitungs-Headern",
+            })
+            return {
+                "status": "IGNORED_FOREIGN_DOMAIN",
+                "message_id": msg_id,
+                "from_email": parsed["from_email"],
+                "skipped": True,
+            }
+
+        # 2c. Relevanz-Pruefung fuer ungematchte Absender auf thfc-consulting.de:
         if not lead_obj:
-            to_raw = (parsed.get("to") or "").lower()
-            from_raw = (parsed.get("from_raw") or "").lower()
             subject_raw = unicodedata.normalize("NFKC", str(parsed.get("subject") or "")).casefold().replace("’", "'")
             body_raw = unicodedata.normalize("NFKC", str(parsed.get("body") or "")).casefold().replace("’", "'")
             
-            is_campaign_target = "thfc-consulting.de" in to_raw or "thfc-consulting.de" in from_raw
             has_campaign_keywords = any(kw in subject_raw or kw in body_raw for kw in [
                 "safety gate", "rapex", "produktsicherheit", "sécurité", "securite", "veiligheid", 
                 "gtin", "spielwaren", "jouet", "speelgoed", "compliance", "rückruf", "ruckruf", "rappel"
@@ -540,8 +591,8 @@ class InboundMailCrawler:
                 ))
             )
 
-            # Falls weder Kampagnen-Zieladresse noch relevante Keywords noch (Opt-Outs in echter Antwort) -> als unbeteiligte Mail ignorieren
-            if not is_campaign_target and not has_campaign_keywords and not (has_optout_keywords and is_reply):
+            # Falls weder relevante Keywords noch (Opt-Outs in echter Antwort) -> als unbeteiligte Mail ignorieren
+            if not has_campaign_keywords and not (has_optout_keywords and is_reply):
                 self.mark_processed(msg_id, details={"status": "IGNORED_UNRELATED", "from": parsed["from_email"]})
                 return {
                     "status": "IGNORED_UNRELATED",
