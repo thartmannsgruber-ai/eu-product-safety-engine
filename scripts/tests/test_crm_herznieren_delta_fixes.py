@@ -257,6 +257,88 @@ class TestHerznierenDeltaFixes(unittest.TestCase):
         self.assertEqual(res["status"], "PROCESSED")
         self.assertTrue(blacklist.is_blacklisted("jouet_france@societe.fr"))
 
+    # -----------------------------------------------------------------------
+    # F-05: Newsletter & Automated Mail Filter (Doctolib Incident Prevention)
+    # -----------------------------------------------------------------------
+
+    def test_doctolib_newsletter_ignored_and_not_blacklisted(self):
+        """Doctolib-Marketing-Newsletter darf trotz 'abmelden'/'unsubscribe' nicht als Opt-Out geblacklistet werden."""
+        storage = CRMStorage(leads_file=self.leads_file)
+        blacklist = BlacklistManager(blacklist_file=self.blacklist_file)
+
+        crawler = InboundMailCrawler(
+            storage=storage,
+            blacklist_mgr=blacklist,
+            state_file=self.state_file,
+            auto_draft=False,
+        )
+
+        msg = {
+            "from": "no-reply@news.doctolib.com",
+            "to": "t.hartmannsgruber@googlemail.com",
+            "subject": "Wie geht's Deinen Liebsten?",
+            "body": "Was für ältere Menschen, die Dir nahestehen, im Winter zählt...\nWenn Sie keine E-Mails mehr erhalten möchten: abmelden oder unsubscribe.",
+            "message_id": "<AE.87.47536.601200B6@sparkpost.doctolib.com>",
+            "list_unsubscribe": "<https://news.doctolib.com/u/unsub>",
+            "precedence": "bulk",
+        }
+
+        res = crawler.process_message(msg)
+        self.assertEqual(res["status"], "IGNORED_AUTOMATED")
+        self.assertTrue(res.get("skipped", False))
+        self.assertFalse(blacklist.is_blacklisted("no-reply@news.doctolib.com"))
+
+    def test_generic_cold_newsletter_without_rfc_headers_dropped_as_unrelated(self):
+        """Unverlangter Newsletter an Privatadresse ohne Re-Bezug wird als IGNORED_UNRELATED verworfen."""
+        storage = CRMStorage(leads_file=self.leads_file)
+        blacklist = BlacklistManager(blacklist_file=self.blacklist_file)
+
+        crawler = InboundMailCrawler(
+            storage=storage,
+            blacklist_mgr=blacklist,
+            state_file=self.state_file,
+            auto_draft=False,
+        )
+
+        msg = {
+            "from": "angebote@mode-boutique.de",
+            "to": "t.hartmannsgruber@googlemail.com",
+            "subject": "Herbstmode 2026 jetzt reduziert",
+            "body": "Entdecken Sie neue Trends.\nKlicken Sie hier zum Abmelden.",
+            "message_id": "<cold-newsletter-99@mode-boutique.de>",
+        }
+
+        res = crawler.process_message(msg)
+        self.assertEqual(res["status"], "IGNORED_UNRELATED")
+        self.assertTrue(res.get("skipped", False))
+        self.assertFalse(blacklist.is_blacklisted("angebote@mode-boutique.de"))
+
+    def test_legitimate_optout_reply_from_alternate_address_is_blacklisted(self):
+        """Echte Absage-Antwort von alternativer Firmenadresse auf Kampagne wird verarbeitet & geblacklistet."""
+        storage = CRMStorage(leads_file=self.leads_file)
+        blacklist = BlacklistManager(blacklist_file=self.blacklist_file)
+
+        crawler = InboundMailCrawler(
+            storage=storage,
+            blacklist_mgr=blacklist,
+            state_file=self.state_file,
+            auto_draft=False,
+        )
+
+        msg = {
+            "from": "geschaeftsfuehrung@spielwaren-karl.de",
+            "to": "info@thfc-consulting.de",
+            "subject": "Re: Schnelltest Safety Gate & Produktsicherheit",
+            "body": "Guten Tag,\nwir haben kein Interesse an weiteren Tests. Bitte kontaktieren Sie uns nicht mehr.\nMit freundlichen Grüßen",
+            "in_reply_to": "<outreach-karl-01@thfc-consulting.de>",
+            "message_id": "<reply-karl-99@spielwaren-karl.de>",
+        }
+
+        res = crawler.process_message(msg)
+        self.assertEqual(res["status"], "PROCESSED")
+        self.assertFalse(res.get("skipped", False))
+        self.assertTrue(blacklist.is_blacklisted("geschaeftsfuehrung@spielwaren-karl.de"))
+
 
 if __name__ == "__main__":
     unittest.main()

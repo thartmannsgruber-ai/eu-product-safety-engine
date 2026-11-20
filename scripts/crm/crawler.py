@@ -274,6 +274,11 @@ class InboundMailCrawler:
             references = raw_input.get("references") or raw_input.get("References") or ""
             message_id = raw_input.get("message_id") or raw_input.get("Message-ID") or ""
             date_str = raw_input.get("date") or datetime.now(timezone.utc).isoformat()
+            to_raw = raw_input.get("to") or raw_input.get("To") or ""
+            list_unsub = raw_input.get("list_unsubscribe") or raw_input.get("List-Unsubscribe") or ""
+            list_unsub_post = raw_input.get("list_unsubscribe_post") or raw_input.get("List-Unsubscribe-Post") or ""
+            precedence = raw_input.get("precedence") or raw_input.get("Precedence") or ""
+            auto_submitted = raw_input.get("auto_submitted") or raw_input.get("Auto-Submitted") or ""
 
             if not message_id:
                 hash_input = f"{sender_email}_{subj}_{date_str}_{body[:100]}".encode("utf-8")
@@ -282,12 +287,17 @@ class InboundMailCrawler:
             return {
                 "from_email": normalize_email(sender_email),
                 "from_raw": sender,
+                "to": str(to_raw),
                 "subject": subj,
                 "body": body,
                 "in_reply_to": in_reply_to.strip("<> ").strip(),
                 "references": str(references).strip("<> ").strip(),
                 "message_id": message_id.strip("<> ").strip(),
                 "date": date_str,
+                "list_unsubscribe": str(list_unsub).strip(),
+                "list_unsubscribe_post": str(list_unsub_post).strip(),
+                "precedence": str(precedence).strip(),
+                "auto_submitted": str(auto_submitted).strip(),
             }
 
         # Falls RFC 822 Bytes oder String
@@ -304,12 +314,17 @@ class InboundMailCrawler:
         if not sender_email and "@" in from_hdr:
             sender_email = from_hdr.strip()
 
+        to_hdr = decode_mime_header(msg.get("To", ""))
         subject = decode_mime_header(msg.get("Subject", ""))
         body = extract_message_body(msg)
         in_reply_to = decode_mime_header(msg.get("In-Reply-To", "")).strip("<> ")
         references = decode_mime_header(msg.get("References", "")).strip("<> ")
         message_id = decode_mime_header(msg.get("Message-ID", "")).strip("<> ")
         date_str = decode_mime_header(msg.get("Date", "")) or datetime.now(timezone.utc).isoformat()
+        list_unsub = decode_mime_header(msg.get("List-Unsubscribe", "")).strip()
+        list_unsub_post = decode_mime_header(msg.get("List-Unsubscribe-Post", "")).strip()
+        precedence = decode_mime_header(msg.get("Precedence", "")).strip()
+        auto_submitted = decode_mime_header(msg.get("Auto-Submitted", "")).strip()
 
         if not message_id:
             hash_input = f"{sender_email}_{subject}_{date_str}_{body[:100]}".encode("utf-8")
@@ -318,13 +333,57 @@ class InboundMailCrawler:
         return {
             "from_email": normalize_email(sender_email),
             "from_raw": from_hdr,
+            "to": to_hdr,
             "subject": subject,
             "body": body,
             "in_reply_to": in_reply_to,
             "references": references,
             "message_id": message_id,
             "date": date_str,
+            "list_unsubscribe": list_unsub,
+            "list_unsubscribe_post": list_unsub_post,
+            "precedence": precedence,
+            "auto_submitted": auto_submitted,
         }
+
+    @staticmethod
+    def is_automated_or_newsletter(parsed: Dict[str, Any]) -> bool:
+        """
+        Erkennt automatisierte Newsletter, Transaktions- und System-Mails anhand von RFC-Headern
+        und Absender-Mustern, um False-Positive Opt-Outs (z. B. Doctolib-Abmelde-Links) zu verhindern.
+        """
+        # 1. RFC List-Unsubscribe Header (Standard fuer Massen-Newsletter)
+        if parsed.get("list_unsubscribe") or parsed.get("list_unsubscribe_post"):
+            return True
+
+        # 2. Precedence Header (bulk, list, junk)
+        precedence = (parsed.get("precedence") or "").strip().lower()
+        if precedence in ("bulk", "list", "junk"):
+            return True
+
+        # 3. Auto-Submitted Header (RFC 3834)
+        auto_submitted = (parsed.get("auto_submitted") or "").strip().lower()
+        if auto_submitted and auto_submitted != "no":
+            return True
+
+        # 4. Typische Newsletter- und No-Reply-Absenderadressen
+        from_email = (parsed.get("from_email") or "").lower()
+        sender_local = from_email.split("@")[0] if "@" in from_email else ""
+        sender_domain = from_email.split("@")[1] if "@" in from_email else ""
+
+        automated_prefixes = (
+            "no-reply", "noreply", "newsletter", "news", "notifications",
+            "notification", "mailer-daemon", "bounce", "marketing", "updates", "info-news"
+        )
+        if any(sender_local == p or sender_local.startswith(f"{p}-") or sender_local.startswith(f"{p}+") or sender_local.startswith(f"{p}_") or sender_local.startswith(f"{p}.") for p in automated_prefixes):
+            return True
+
+        # Subdomains wie news.doctolib.com, nl.company.com, mail.service.com
+        automated_subdomains = ("news.", "newsletter.", "nl.", "bounce.", "marketing.", "mkt.")
+        if any(sender_domain.startswith(sub) for sub in automated_subdomains):
+            return True
+
+        return False
 
     # -----------------------------------------------------------------------
     # Lead Matching Engine
@@ -429,6 +488,20 @@ class InboundMailCrawler:
                 "skipped": True,
             }
 
+        # 1b. Newsletter- und Automated-Header-Filter (Schutz vor False-Positive Opt-Outs durch News-Footer)
+        if self.is_automated_or_newsletter(parsed):
+            self.mark_processed(msg_id, details={
+                "status": "IGNORED_AUTOMATED",
+                "from": parsed["from_email"],
+                "subject": parsed.get("subject", "")
+            })
+            return {
+                "status": "IGNORED_AUTOMATED",
+                "message_id": msg_id,
+                "from_email": parsed["from_email"],
+                "skipped": True,
+            }
+
         # 2. Lead matchen
         lead_email, lead_obj, match_method = self.match_lead(
             from_email=parsed["from_email"],
@@ -457,8 +530,18 @@ class InboundMailCrawler:
                 "stop", "unsubscribe", "remove", "pas d'intérêt", "pas d'interet", "non merci", "désinscrire", "desinscrire",
                 "geen interesse", "nee", "niet geïnteresseerd", "niet geinteresseerd", "afmelden", "uitschrijven"
             ])
-            # Falls weder Kampagnen-Zieladresse noch relevante Keywords oder Opt-Outs -> als unbeteiligte Mail ignorieren
-            if not is_campaign_target and not has_campaign_keywords and not has_optout_keywords:
+            # Bei ungematchten Absendern gelten Opt-Out-Keywords nur, wenn es sich nachweisbar um eine Antwort handelt
+            is_reply = bool(
+                parsed.get("in_reply_to") 
+                or parsed.get("references") 
+                or any(subject_raw.startswith(pref) for pref in (
+                    "re:", "re ", "aw:", "aw ", "antw:", "antw ", "antwort", 
+                    "rep:", "rép:", "fwd:", "fw:", "wg:", "tr:", "vs:"
+                ))
+            )
+
+            # Falls weder Kampagnen-Zieladresse noch relevante Keywords noch (Opt-Outs in echter Antwort) -> als unbeteiligte Mail ignorieren
+            if not is_campaign_target and not has_campaign_keywords and not (has_optout_keywords and is_reply):
                 self.mark_processed(msg_id, details={"status": "IGNORED_UNRELATED", "from": parsed["from_email"]})
                 return {
                     "status": "IGNORED_UNRELATED",

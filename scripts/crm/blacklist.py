@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import os
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -152,9 +153,15 @@ class BlacklistManager:
     def remove_from_blacklist(self, email: str) -> bool:
         """Entfernt eine E-Mail (fuer Tests oder manuelle Korrektur)."""
         norm_email = normalize_email(email)
+        self.load()
         if norm_email in self._entries:
             del self._entries[norm_email]
-            self.save()
+            self.filepath.parent.mkdir(parents=True, exist_ok=True)
+            temp_path = self.filepath.with_suffix(f".tmp.{os.getpid()}.{uuid.uuid4().hex[:8]}")
+            with open(temp_path, "w", encoding="utf-8") as f:
+                json.dump(self._entries, f, indent=2, ensure_ascii=False)
+            temp_path.replace(self.filepath)
+            self._load_error = False
             return True
         return False
 
