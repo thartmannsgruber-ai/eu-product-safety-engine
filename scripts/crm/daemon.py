@@ -48,17 +48,35 @@ def run_daemon(poll_interval: int = 15, mail_check_interval: int = 120, max_runs
     logger.info(f"  Telegram Poll: alle {poll_interval}s | Mail Scan: alle {mail_check_interval}s")
     logger.info("=========================================================")
 
+    offset_file = project_root / ".crm" / "telegram_state.json"
+    telegram_offset = 0
+    if offset_file.exists():
+        try:
+            with open(offset_file, "r", encoding="utf-8") as f:
+                telegram_offset = json.load(f).get("offset", 0)
+        except Exception:
+            telegram_offset = 0
+
     last_mail_check = 0.0
     runs = 0
-    telegram_offset = 0
 
     while True:
         try:
             # 1. Telegram Updates verarbeiten (Button-Klicks & Chat-ID Erfassung)
             updates = bot.get_updates(offset=telegram_offset, timeout=poll_interval)
-            for u in updates:
-                telegram_offset = max(telegram_offset, u.get("update_id", 0) + 1)
-                bot.handle_update(u)
+            if updates:
+                for u in updates:
+                    telegram_offset = max(telegram_offset, u.get("update_id", 0) + 1)
+                    bot.handle_update(u)
+                # Offset atomar sichern
+                try:
+                    offset_file.parent.mkdir(parents=True, exist_ok=True)
+                    temp_f = offset_file.with_suffix(".tmp")
+                    with open(temp_f, "w", encoding="utf-8") as f:
+                        json.dump({"offset": telegram_offset, "updated_at": datetime.now(timezone.utc).isoformat()}, f)
+                    temp_f.replace(offset_file)
+                except Exception:
+                    pass
 
             # 2. Regelmaessiger Postfach-Scan
             now = time.time()

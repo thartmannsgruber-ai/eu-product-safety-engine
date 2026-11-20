@@ -103,7 +103,10 @@ class TelegramCRMNotifier:
 
     def get_updates(self, offset: int = 0, timeout: int = 5) -> List[Dict[str, Any]]:
         """Liest neue Nachrichten / Callback-Events."""
-        res = self._api_call("getUpdates", {"offset": offset, "timeout": timeout}, timeout=timeout + 5)
+        payload: Dict[str, Any] = {"timeout": timeout}
+        if offset > 0:
+            payload["offset"] = offset
+        res = self._api_call("getUpdates", payload, timeout=timeout + 5)
         if res.get("ok"):
             return res.get("result", [])
         return []
@@ -252,66 +255,87 @@ class TelegramCRMNotifier:
 
     def handle_update(self, update: Dict[str, Any]) -> None:
         """Verarbeitet eingehende Telegram-Events (Nachrichten oder Button-Klicks)."""
-        # 1. Callback Query (Button Klick)
-        if "callback_query" in update:
-            cb = update["callback_query"]
-            cb_id = cb["id"]
-            data = cb.get("data", "")
-            from_user = cb.get("from", {})
-            user_name = from_user.get("first_name", "Thomas")
-            msg = cb.get("message", {})
-            chat_id = msg.get("chat", {}).get("id")
-            msg_id = msg.get("message_id")
-            current_text = msg.get("text", "")
+        try:
+            # 1. Callback Query (Button Klick)
+            if "callback_query" in update:
+                cb = update["callback_query"]
+                cb_id = cb["id"]
+                data = cb.get("data", "")
+                from_user = cb.get("from", {})
+                user_name = from_user.get("first_name", "Thomas")
+                msg = cb.get("message", {})
+                chat_id = msg.get("chat", {}).get("id")
+                msg_id = msg.get("message_id")
+                current_text = msg.get("text", "")
 
-            # Sicherheitscheck: Chat-ID merken falls noetig
-            if not self.chat_id and chat_id:
-                self.save_chat_id(chat_id)
+                logger.info(f"[TelegramBot] Callback empfangen von {user_name} (chat_id={chat_id}): '{data}'")
 
-            if data.startswith("approve:"):
-                draft_id = data.split(":", 1)[1]
-                self._handle_approve_callback(cb_id, draft_id, chat_id, msg_id, current_text, user_name)
-            elif data.startswith("reject:"):
-                draft_id = data.split(":", 1)[1]
-                self._handle_reject_callback(cb_id, draft_id, chat_id, msg_id, current_text, user_name)
-            elif data.startswith("view:"):
-                draft_id = data.split(":", 1)[1]
-                self._handle_view_callback(cb_id, draft_id, chat_id)
-            return
+                # Sicherheitscheck: Chat-ID merken falls noetig
+                if not self.chat_id and chat_id:
+                    self.save_chat_id(chat_id)
 
-        # 2. Normale Text-Nachricht (z.B. /start, /status, /queue)
-        if "message" in update:
-            msg = update["message"]
-            chat_id = msg.get("chat", {}).get("id")
-            text = (msg.get("text") or "").strip()
-            user = msg.get("from", {})
-            user_first = user.get("first_name", "Thomas")
-
-            if chat_id and not self.chat_id:
-                self.save_chat_id(chat_id)
-                welcome = (
-                    f"👋 <b>Hallo {user_first}!</b>\n\n"
-                    f"Der <b>ProductSafetyEngine CRM-Bot</b> ist jetzt aktiv mit deinem Account verknüpft.\n\n"
-                    f"🛡️ <b>Was ich tue:</b>\n"
-                    f"• Ich scanne eingehende E-Mails auf <code>info@thfc-consulting.de</code>.\n"
-                    f"• Absagen werden sofort geblacklistet (Goldene Regel).\n"
-                    f"• Recherche-Entwürfe landen zur 1-Klick-Freigabe direkt hier auf deinem iPhone!\n\n"
-                    f"<b>Befehle:</b>\n"
-                    f"/status - Zeigt CRM & Lead-Zahlen\n"
-                    f"/queue - Offene Entwürfe anzeigen"
-                )
-                self.send_message(welcome, chat_id=chat_id)
+                if data.startswith("approve:"):
+                    draft_id = data.split(":", 1)[1]
+                    self._handle_approve_callback(cb_id, draft_id, chat_id, msg_id, current_text, user_name)
+                elif data.startswith("reject:"):
+                    draft_id = data.split(":", 1)[1]
+                    self._handle_reject_callback(cb_id, draft_id, chat_id, msg_id, current_text, user_name)
+                elif data.startswith("view:"):
+                    draft_id = data.split(":", 1)[1]
+                    self._handle_view_callback(cb_id, draft_id, chat_id)
                 return
 
-            if text.startswith("/start"):
-                self.send_message(
-                    f"✅ <b>Bereit, {user_first}!</b>\nIch warte auf eingehende Lead-Antworten. Du kannst mich jederzeit mit /status oder /queue abfragen.",
-                    chat_id=chat_id
-                )
-            elif text.startswith("/status"):
-                self._send_status_reply(chat_id)
-            elif text.startswith("/queue"):
-                self._send_queue_reply(chat_id)
+            # 2. Normale Text-Nachricht (z.B. /start, /status, /queue, /help)
+            if "message" in update:
+                msg = update["message"]
+                chat_id = msg.get("chat", {}).get("id")
+                raw_text = (msg.get("text") or "").strip()
+                user = msg.get("from", {})
+                user_first = user.get("first_name", "Thomas")
+
+                if chat_id and not self.chat_id:
+                    self.save_chat_id(chat_id)
+
+                # Robuste Normalisierung: Kleinbuchstaben, Bot-Handle (@BotName) entfernen
+                clean_cmd = raw_text.lower().split()[0].split("@")[0] if raw_text else ""
+                logger.info(f"[TelegramBot] Eingehende Nachricht: user='{user_first}' chat_id={chat_id} text='{raw_text}' cmd='{clean_cmd}'")
+
+                if clean_cmd in ("/start", "start"):
+                    welcome = (
+                        f"👋 <b>Bereit, {user_first}!</b>\n\n"
+                        f"Der <b>ProductSafetyEngine CRM-Bot</b> ist aktiv mit deinem Account verknüpft.\n\n"
+                        f"🛡️ <b>Was ich tue:</b>\n"
+                        f"• Ich scanne eingehende E-Mails auf <code>info@thfc-consulting.de</code>.\n"
+                        f"• Absagen werden sofort geblacklistet (Goldene Regel).\n"
+                        f"• Recherche-Entwürfe landen zur 1-Klick-Freigabe direkt hier auf deinem iPhone!\n\n"
+                        f"<b>Befehle:</b>\n"
+                        f"• <code>/status</code> - Zeigt aktuelle Lead-Zahlen & Pipeline-Status\n"
+                        f"• <code>/queue</code> - Offene Recherche-Entwürfe anzeigen & prüfen\n"
+                        f"• <code>/help</code> - Hilfe & Befehlsübersicht"
+                    )
+                    self.send_message(welcome, chat_id=chat_id)
+                elif clean_cmd in ("/status", "status"):
+                    self._send_status_reply(chat_id)
+                elif clean_cmd in ("/queue", "queue"):
+                    self._send_queue_reply(chat_id)
+                elif clean_cmd in ("/help", "help", "hilfe"):
+                    help_text = (
+                        f"🤖 <b>ProductSafetyEngine CRM Cockpit</b>\n\n"
+                        f"<b>Verfügbare Befehle:</b>\n"
+                        f"• <code>/status</code> - Aktueller Stand Leads, Entwürfe & Blacklist\n"
+                        f"• <code>/queue</code> - Offene Recherche-Entwürfe mit Freigabe-Buttons\n"
+                        f"• <code>/help</code> - Diese Hilfe anzeigen\n\n"
+                        f"<i>Hinweis: Eingehende Lead-Mails erzeugen automatisch Push-Nachrichten mit Freigabe-Buttons.</i>"
+                    )
+                    self.send_message(help_text, chat_id=chat_id)
+                else:
+                    fallback_text = (
+                        f"ℹ️ Unbekannter Befehl: <code>{raw_text}</code>\n\n"
+                        f"Nutze <code>/status</code> für Kennzahlen oder <code>/queue</code> für offene Entwürfe."
+                    )
+                    self.send_message(fallback_text, chat_id=chat_id)
+        except Exception as exc:
+            logger.error(f"[TelegramBot] Fehler beim Verarbeiten des Updates: {exc}", exc_info=True)
 
     def _handle_approve_callback(self, cb_id: str, draft_id: str, chat_id: int, msg_id: int, current_text: str, user_name: str) -> None:
         """Gibt den Entwurf frei und versendet ihn via Resend."""
@@ -399,18 +423,21 @@ class TelegramCRMNotifier:
             f"❌ <b>Abgelehnt:</b> {queue_stats.get('REJECTED', 0)}\n"
             f"🛡️ <b>Opt-Out Blacklist:</b> {bl_count} Adressen"
         )
-        self.send_message(text, chat_id=chat_id)
+        res = self.send_message(text, chat_id=chat_id)
+        logger.info(f"[TelegramBot] Status-Antwort an chat_id={chat_id} gesendet: {res.get('ok')}")
 
     def _send_queue_reply(self, chat_id: int) -> None:
         """Sendet Liste wartender Entwuerfe auf /queue."""
         from scripts.crm.review_queue import get_default_queue, DraftStatus
         pending = get_default_queue().list_drafts(status=DraftStatus.PENDING_REVIEW)
         if not pending:
-            self.send_message("🎉 Die Review-Queue ist aktuell leer. Keine offenen Entwürfe!", chat_id=chat_id)
+            res = self.send_message("🎉 Die Review-Queue ist aktuell leer. Keine offenen Entwürfe!", chat_id=chat_id)
+            logger.info(f"[TelegramBot] Queue-Antwort (leer) an chat_id={chat_id} gesendet: {res.get('ok')}")
             return
 
         for draft in pending[:5]:
             self.notify_new_draft(draft)
+        logger.info(f"[TelegramBot] {len(pending[:5])} Entwuerfe an chat_id={chat_id} gesendet.")
 
 
 # Modul-Singleton
