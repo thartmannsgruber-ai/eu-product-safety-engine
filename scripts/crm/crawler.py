@@ -450,8 +450,13 @@ class InboundMailCrawler:
                 "safety gate", "rapex", "produktsicherheit", "sécurité", "veiligheid", 
                 "gtin", "spielwaren", "jouet", "speelgoed", "compliance", "rückruf", "rappel"
             ])
-            # Falls weder Kampagnen-Zieladresse noch relevante Keywords -> als unbeteiligte Mail ignorieren
-            if not is_campaign_target and not has_campaign_keywords:
+            # F-04: Goldene Regel absichern - Opt-Out-Signalwoerter duerfen nie als unrelated verworfen werden
+            has_optout_keywords = any(kw in subject_raw or kw in body_raw for kw in [
+                "nein", "kein interesse", "stop", "unsubscribe", "abmelden",
+                "pas d'intérêt", "non merci", "geen interesse", "nee", "niet geïnteresseerd"
+            ])
+            # Falls weder Kampagnen-Zieladresse noch relevante Keywords oder Opt-Outs -> als unbeteiligte Mail ignorieren
+            if not is_campaign_target and not has_campaign_keywords and not has_optout_keywords:
                 self.mark_processed(msg_id, details={"status": "IGNORED_UNRELATED", "from": parsed["from_email"]})
                 return {
                     "status": "IGNORED_UNRELATED",

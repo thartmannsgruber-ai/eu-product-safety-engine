@@ -253,6 +253,29 @@ class TelegramCRMNotifier:
     # Event-Loop & Callback-Dispatcher
     # -----------------------------------------------------------------------
 
+    def is_authorized(self, user_id: Optional[Union[str, int]], chat_id: Optional[Union[str, int]]) -> bool:
+        """
+        Prueft strikt, ob User-ID und Chat-ID autorisiert sind (F-01).
+        Erlaubt nur Anfragen von dem in .env konfigurierten TELEGRAM_CHAT_ID.
+        """
+        if not self.chat_id:
+            logger.warning("[TelegramBot] Autorisierung verweigert: Keine TELEGRAM_CHAT_ID in .env hinterlegt.")
+            return False
+
+        target = str(self.chat_id).strip()
+        str_user = str(user_id).strip() if user_id is not None else ""
+        str_chat = str(chat_id).strip() if chat_id is not None else ""
+
+        if str_chat != target:
+            logger.warning(f"[TelegramBot] Unautorisierter Chat abgewiesen: chat_id={str_chat} (Erwartet: {target})")
+            return False
+
+        if str_user and str_user != target:
+            logger.warning(f"[TelegramBot] Unautorisierter User abgewiesen: user_id={str_user} (Erwartet: {target})")
+            return False
+
+        return True
+
     def handle_update(self, update: Dict[str, Any]) -> None:
         """Verarbeitet eingehende Telegram-Events (Nachrichten oder Button-Klicks)."""
         try:
@@ -262,17 +285,20 @@ class TelegramCRMNotifier:
                 cb_id = cb["id"]
                 data = cb.get("data", "")
                 from_user = cb.get("from", {})
+                user_id = from_user.get("id")
                 user_name = from_user.get("first_name", "Thomas")
                 msg = cb.get("message", {})
                 chat_id = msg.get("chat", {}).get("id")
                 msg_id = msg.get("message_id")
                 current_text = msg.get("text", "")
 
-                logger.info(f"[TelegramBot] Callback empfangen von {user_name} (chat_id={chat_id}): '{data}'")
+                # F-01: Autorisierungspruefung fuer Callbacks
+                if not self.is_authorized(user_id=user_id, chat_id=chat_id):
+                    logger.warning(f"[TelegramBot] Unberechtigter Callback-Versuch von user_id={user_id}, chat_id={chat_id}")
+                    self.answer_callback(cb_id, "⛔ Nicht autorisiert!", show_alert=True)
+                    return
 
-                # Sicherheitscheck: Chat-ID merken falls noetig
-                if not self.chat_id and chat_id:
-                    self.save_chat_id(chat_id)
+                logger.info(f"[TelegramBot] Autorisierter Callback von {user_name} (chat_id={chat_id}): '{data}'")
 
                 if data.startswith("approve:"):
                     draft_id = data.split(":", 1)[1]
@@ -291,10 +317,13 @@ class TelegramCRMNotifier:
                 chat_id = msg.get("chat", {}).get("id")
                 raw_text = (msg.get("text") or "").strip()
                 user = msg.get("from", {})
+                user_id = user.get("id")
                 user_first = user.get("first_name", "Thomas")
 
-                if chat_id and not self.chat_id:
-                    self.save_chat_id(chat_id)
+                # F-01: Autorisierungspruefung fuer Nachrichten
+                if not self.is_authorized(user_id=user_id, chat_id=chat_id):
+                    logger.warning(f"[TelegramBot] Nachricht von nicht autorisiertem User {user_id} in Chat {chat_id} ignoriert.")
+                    return
 
                 # Robuste Normalisierung: Kleinbuchstaben, Bot-Handle (@BotName) entfernen
                 clean_cmd = raw_text.lower().split()[0].split("@")[0] if raw_text else ""
@@ -348,8 +377,21 @@ class TelegramCRMNotifier:
             self.answer_callback(cb_id, f"Fehler: Draft {draft_id} nicht gefunden!", show_alert=True)
             return
 
-        # Freigeben
-        queue.approve(draft_id, reviewed_by=f"Telegram ({user_name})")
+        current_status = draft.get("status")
+
+        # F-02: Idempotenz-Schutz
+        if current_status in (DraftStatus.APPROVED, DraftStatus.SENT):
+            self.answer_callback(cb_id, "ℹ️ Dieser Entwurf wurde bereits freigegeben/versendet!", show_alert=True)
+            return
+        if current_status == DraftStatus.REJECTED:
+            self.answer_callback(cb_id, "⚠️ Dieser Entwurf wurde abgelehnt und kann nicht mehr freigegeben werden.", show_alert=True)
+            return
+        if current_status != DraftStatus.PENDING_REVIEW:
+            self.answer_callback(cb_id, f"⚠️ Ungültiger Entwurfsstatus: {current_status}", show_alert=True)
+            return
+
+        # Statuswechsel atomar auf APPROVED setzen
+        queue.approve(draft_id, reviewer=f"Telegram ({user_name})")
 
         # Versenden via Dispatcher
         dispatcher = get_default_dispatcher()
@@ -376,9 +418,21 @@ class TelegramCRMNotifier:
 
     def _handle_reject_callback(self, cb_id: str, draft_id: str, chat_id: int, msg_id: int, current_text: str, user_name: str) -> None:
         """Lehnt einen Entwurf ab."""
-        from scripts.crm.review_queue import get_default_queue
+        from scripts.crm.review_queue import get_default_queue, DraftStatus
         queue = get_default_queue()
-        queue.reject(draft_id, reason=f"Abgelehnt via Telegram durch {user_name}")
+        draft = queue.get_draft(draft_id)
+        if not draft:
+            self.answer_callback(cb_id, f"Fehler: Draft {draft_id} nicht gefunden!", show_alert=True)
+            return
+
+        current_status = draft.get("status")
+
+        # F-02: Idempotenz-Schutz
+        if current_status != DraftStatus.PENDING_REVIEW:
+            self.answer_callback(cb_id, f"ℹ️ Entwurf ist nicht mehr offen (Status: {current_status})!", show_alert=True)
+            return
+
+        queue.reject(draft_id, reviewer=f"Telegram ({user_name})", reason=f"Abgelehnt via Telegram durch {user_name}")
         self.answer_callback(cb_id, "❌ Entwurf abgelehnt.")
 
         now_str = datetime.now(timezone.utc).strftime("%d.%m.%Y %H:%M UTC")

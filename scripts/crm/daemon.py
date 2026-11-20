@@ -10,6 +10,7 @@ scripts/crm/daemon.py
 from __future__ import annotations
 
 import argparse
+import json
 import logging
 import os
 import sys
@@ -54,7 +55,9 @@ def run_daemon(poll_interval: int = 15, mail_check_interval: int = 120, max_runs
         try:
             with open(offset_file, "r", encoding="utf-8") as f:
                 telegram_offset = json.load(f).get("offset", 0)
-        except Exception:
+                logger.info(f"[DAEMON] Telegram-Offset geladen: {telegram_offset}")
+        except (json.JSONDecodeError, OSError) as load_err:
+            logger.warning(f"[DAEMON] Fehler beim Laden des Telegram-Offsets ({load_err}). Starte bei 0.")
             telegram_offset = 0
 
     last_mail_check = 0.0
@@ -75,8 +78,9 @@ def run_daemon(poll_interval: int = 15, mail_check_interval: int = 120, max_runs
                     with open(temp_f, "w", encoding="utf-8") as f:
                         json.dump({"offset": telegram_offset, "updated_at": datetime.now(timezone.utc).isoformat()}, f)
                     temp_f.replace(offset_file)
-                except Exception:
-                    pass
+                    logger.debug(f"[DAEMON] Telegram-Offset gesichert: {telegram_offset}")
+                except Exception as save_err:
+                    logger.warning(f"[DAEMON] Fehler beim Sichern des Telegram-Offsets: {save_err}")
 
             # 2. Regelmaessiger Postfach-Scan
             now = time.time()
