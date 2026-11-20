@@ -79,6 +79,8 @@ class CRMStorage:
             if isinstance(data, dict):
                 for k, v in data.items():
                     norm_k = normalize_email(k)
+                    if not norm_k:
+                        continue
                     if isinstance(v, dict):
                         entry = dict(v)
                         entry["email"] = norm_k
@@ -87,6 +89,8 @@ class CRMStorage:
                 for item in data:
                     if isinstance(item, dict) and "email" in item:
                         norm_k = normalize_email(item["email"])
+                        if not norm_k:
+                            continue
                         entry = dict(item)
                         entry["email"] = norm_k
                         normalized[norm_k] = entry
@@ -155,6 +159,8 @@ class CRMStorage:
         initialized_count = 0
 
         for norm_email in all_emails:
+            if not norm_email:
+                continue
             c_info = campaign_data.get(norm_email, {})
             s_info = sent_log_data.get(norm_email, {})
 
