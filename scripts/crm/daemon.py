@@ -90,15 +90,15 @@ def run_daemon(poll_interval: int = 15, mail_check_interval: int = 120, max_runs
                 last_mail_check = now
                 try:
                     logger.info("[DAEMON] Fuehre Postfach-Scan aus...")
-                    # Versuche IMAP-Crawl (ignoriert Fehler sauber, falls Mailbox leer oder temporaer offline)
-                    results = crawler.crawl_imap(folder="INBOX", unread_only=True)
+                    # Fuehrt Crawl aus (automatisch Microsoft Graph fuer info@thfc-consulting.de oder IMAP-Fallback)
+                    results = crawler.crawl()
                     if results:
-                        logger.info(f"[DAEMON] {len(results)} neue Inbound-Nachrichten verarbeitet.")
+                        logger.info(f"[DAEMON] {len(results)} Inbound-Nachrichten gescannt/verarbeitet.")
                 except ValueError as ve:
-                    # Fehlende IMAP-Credentials werden protokolliert, blockieren den Daemon aber nicht
-                    logger.debug(f"[DAEMON] IMAP Scan uebersprungen: {ve}")
+                    # Fehlende Credentials werden protokolliert, blockieren den Daemon aber nicht
+                    logger.debug(f"[DAEMON] Scan uebersprungen: {ve}")
                 except Exception as mail_exc:
-                    logger.warning(f"[DAEMON] Fehler beim IMAP-Scan: {mail_exc}")
+                    logger.warning(f"[DAEMON] Fehler beim Postfach-Scan: {mail_exc}")
 
             runs += 1
             if max_runs > 0 and runs >= max_runs:

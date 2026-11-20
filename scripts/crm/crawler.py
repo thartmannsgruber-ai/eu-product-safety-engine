@@ -791,6 +791,98 @@ class InboundMailCrawler:
 
         return results
 
+    def get_graph_token(self) -> str:
+        """Holt ein OAuth2 Access Token fuer Microsoft Graph via client_credentials."""
+        import urllib.request
+        import urllib.parse
+        env = load_env_crawler()
+        tenant_id = os.environ.get("MS_GRAPH_TENANT_ID") or env.get("MS_GRAPH_TENANT_ID")
+        client_id = os.environ.get("MS_GRAPH_CLIENT_ID") or env.get("MS_GRAPH_CLIENT_ID")
+        client_secret = os.environ.get("MS_GRAPH_CLIENT_SECRET") or env.get("MS_GRAPH_CLIENT_SECRET")
+
+        if not tenant_id or not client_id or not client_secret:
+            raise ValueError(
+                "Microsoft Graph Zugangsdaten unvollstaendig (MS_GRAPH_TENANT_ID, MS_GRAPH_CLIENT_ID, MS_GRAPH_CLIENT_SECRET)."
+            )
+
+        token_url = f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token"
+        data = urllib.parse.urlencode({
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "grant_type": "client_credentials",
+            "scope": "https://graph.microsoft.com/.default"
+        }).encode("utf-8")
+
+        req = urllib.request.Request(token_url, data=data, headers={"Content-Type": "application/x-www-form-urlencoded"})
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            token_data = json.loads(resp.read().decode("utf-8"))
+            return token_data["access_token"]
+
+    def crawl_graph(
+        self,
+        mailbox: Optional[str] = None,
+        folders: Optional[List[str]] = None,
+        limit: int = 50,
+    ) -> List[Dict[str, Any]]:
+        """
+        Liest Inbound-Mails ueber die Microsoft Graph API fuer das angegebene Postfach (z. B. info@thfc-consulting.de).
+        Scannt standardmaessig Posteingang (inbox) und Junk-E-Mail (junkemail).
+        Verarbeitet und dedupliziert alle Nachrichten automatisch.
+        """
+        import urllib.request
+        env = load_env_crawler()
+        target_mailbox = mailbox or os.environ.get("MS_GRAPH_MAILBOX") or env.get("MS_GRAPH_MAILBOX", "info@thfc-consulting.de")
+        scan_folders = folders or ["inbox", "junkemail"]
+
+        token = self.get_graph_token()
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/json"
+        }
+
+        results: List[Dict[str, Any]] = []
+
+        for folder in scan_folders:
+            graph_url = f"https://graph.microsoft.com/v1.0/users/{target_mailbox}/mailFolders/{folder}/messages?$top={limit}&$select=id,internetMessageId,subject,from,toRecipients,ccRecipients,body,bodyPreview,receivedDateTime,conversationId,isRead,hasAttachments&$orderby=receivedDateTime%20desc"
+            req = urllib.request.Request(graph_url, headers=headers)
+            try:
+                with urllib.request.urlopen(req, timeout=15) as resp:
+                    data = json.loads(resp.read().decode("utf-8"))
+                    messages = data.get("value", [])
+                    for msg in messages:
+                        from_email = msg.get("from", {}).get("emailAddress", {}).get("address", "")
+                        from_name = msg.get("from", {}).get("emailAddress", {}).get("name", "")
+                        from_raw = f"{from_name} <{from_email}>" if from_name else from_email
+                        
+                        to_list = [r.get("emailAddress", {}).get("address", "") for r in msg.get("toRecipients", [])]
+                        to_str = ", ".join(to_list)
+
+                        # Body ermitteln
+                        body_content = msg.get("body", {}).get("content", "")
+                        if msg.get("body", {}).get("contentType", "").lower() == "html":
+                            body_content = re.sub(r"<[^>]+>", " ", body_content)
+                        if not body_content:
+                            body_content = msg.get("bodyPreview", "")
+
+                        msg_dict = {
+                            "from": from_raw,
+                            "to": to_str,
+                            "subject": msg.get("subject", ""),
+                            "body": body_content,
+                            "message_id": msg.get("internetMessageId") or msg.get("id"),
+                            "date": msg.get("receivedDateTime"),
+                            "graph_id": msg.get("id"),
+                            "conversation_id": msg.get("conversationId")
+                        }
+
+                        res = self.process_message(msg_dict)
+                        results.append(res)
+            except Exception as e:
+                # Ordner-Fehler loggen, aber mit naechstem Ordner fortfahren
+                pass
+
+        return results
+
     def crawl(
         self,
         mock_messages: Optional[List[Union[Dict[str, Any], email.message.Message, str, bytes]]] = None,
@@ -800,9 +892,16 @@ class InboundMailCrawler:
     ) -> List[Dict[str, Any]]:
         """
         Haupt-Einstiegspunkt des Crawlers:
-        Falls mock_messages uebergeben wurden, wird crawl_mock genutzt.
-        Andernfalls wird ueber IMAP SSL gecrawlt.
+        - Falls mock_messages uebergeben wurden, wird crawl_mock genutzt.
+        - Falls CRM_MAIL_SOURCE == 'graph' oder Graph-Credentials vorhanden, wird crawl_graph genutzt.
+        - Andernfalls Fallback auf crawl_imap.
         """
         if mock_messages is not None:
             return self.crawl_mock(mock_messages)
+
+        env = load_env_crawler()
+        source = os.environ.get("CRM_MAIL_SOURCE") or env.get("CRM_MAIL_SOURCE")
+        if source == "graph" or (env.get("MS_GRAPH_TENANT_ID") and env.get("MS_GRAPH_CLIENT_ID") and env.get("MS_GRAPH_CLIENT_SECRET")):
+            return self.crawl_graph()
+
         return self.crawl_imap(folder=folder, unread_only=unread_only, mark_seen=mark_seen)
