@@ -43,12 +43,18 @@ class BlacklistManager:
         # Sicherstellen, dass das Verzeichnis existiert
         self.filepath.parent.mkdir(parents=True, exist_ok=True)
         self._entries: Dict[str, Dict[str, Any]] = {}
+        self._load_error: bool = False
         self.load()
 
     def load(self) -> Dict[str, Dict[str, Any]]:
-        """Laedt die Blacklist aus der JSON-Datei."""
+        """
+        Laedt die Blacklist aus der JSON-Datei.
+        Fail-Closed Schranke: Falls die Datei existiert aber unlesbar/korrupt ist,
+        wird self._load_error = True gesetzt, sodass can_contact() False liefert!
+        """
         if not self.filepath.exists():
             self._entries = {}
+            self._load_error = False
             return self._entries
 
         try:
@@ -81,18 +87,36 @@ class BlacklistManager:
                         normalized_entries[norm_k] = item_copy
             
             self._entries = normalized_entries
-        except Exception:
+            self._load_error = False
+        except Exception as exc:
+            # Sicherheits-Schranke (Fail-Closed): Niemals stillschweigend mit leerer Liste fortfahren!
             self._entries = {}
+            self._load_error = True
 
         return self._entries
 
     def save(self) -> None:
-        """Speichert die Blacklist atomar in die JSON-Datei."""
+        """Speichert die Blacklist atomar in die JSON-Datei (mit Re-Merge und unique temp)."""
         self.filepath.parent.mkdir(parents=True, exist_ok=True)
-        temp_path = self.filepath.with_suffix(".tmp")
+        # Disk-Merge: Vor dem Schreiben frische Eintraege von der Platte zusammenfuehren
+        if self.filepath.exists():
+            try:
+                with open(self.filepath, "r", encoding="utf-8") as f:
+                    disk_data = json.load(f)
+                if isinstance(disk_data, dict):
+                    for k, v in disk_data.items():
+                        norm_k = normalize_email(k)
+                        if norm_k not in self._entries:
+                            self._entries[norm_k] = v
+            except Exception:
+                pass
+
+        import uuid
+        temp_path = self.filepath.with_suffix(f".tmp.{os.getpid()}.{uuid.uuid4().hex[:8]}")
         with open(temp_path, "w", encoding="utf-8") as f:
             json.dump(self._entries, f, indent=2, ensure_ascii=False)
         temp_path.replace(self.filepath)
+        self._load_error = False
 
     def is_blacklisted(self, email: str) -> bool:
         """Liefert True fuer gelistete Adressen, sonst False."""
@@ -136,16 +160,24 @@ class BlacklistManager:
 
     def can_contact(self, email: str) -> bool:
         """
-        Goldene Regel:
-        Sobald eine Adresse blacklisted ist, ist can_contact(email) zwingend False.
+        Goldene Regel (Fail-Closed):
+        Sobald eine Adresse blacklisted ist, ODER wenn die Blacklist-Datei
+        einen Ladefehler aufweist, ist can_contact(email) zwingend False.
         """
+        if getattr(self, "_load_error", False):
+            return False
         return not self.is_blacklisted(email)
 
     def assert_can_contact(self, email: str) -> None:
         """
         Wirft BlacklistedRecipientError wenn ein Kontakt an eine geblacklistete
-        Adresse versucht wird.
+        Adresse versucht wird, oder wenn die Blacklist defekt ist (Fail-Closed).
         """
+        if getattr(self, "_load_error", False):
+            raise BlacklistedRecipientError(
+                f"Sicherheits-Blockade: Blacklist-Datei '{self.filepath}' konnte nicht fehlersicher geladen werden. "
+                f"Ausnahmsloser Fail-Closed Schutz aktiv fuer '{email}'."
+            )
         if self.is_blacklisted(email):
             raise BlacklistedRecipientError(
                 f"Blacklisted recipient: '{email}' is on the permanent opt-out blacklist and cannot be contacted."

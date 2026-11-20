@@ -81,7 +81,9 @@ def strip_quoted_reply(body: str) -> str:
         filtered_lines.append(line)
 
     result = "\n".join(filtered_lines).strip()
-    return result if result else body.strip()
+    # Sicherheits-Schranke: Falls nach Zitat-Bereinigung nichts uebrig bleibt,
+    # niemals auf den unbereinigten Zitier-Text zurueckfallen (verhindert False-Positive Opt-Outs aus Zitaten).
+    return result if result else ""
 
 
 def normalize_text(text: str) -> str:
@@ -219,9 +221,9 @@ PATTERNS_NEGATIVE = {
     ],
     # Englisch
     "en": [
-        r"\bno\b",
-        r"\bno\s+thanks\b",
-        r"\bno\s+thank\s+you\b",
+        r"\bno\b(?!\s+(?:problem|worries))",
+        r"\bno\s*,?\s*thanks\b",
+        r"\bno\s*,?\s*thank\s+you\b",
         r"\bnot\s+interested\b",
         r"\bno\s+interest\b",
         r"\bnot\s+for\s+us\b",
@@ -439,6 +441,9 @@ def classify_intent(body: str, subject: str = "") -> ClassificationResult:
     # -----------------------------------------------------------------------
     negative_matches: List[str] = []
 
+    # Filter fuer False Positives bei Redewendungen (z.B. 'No problem', 'Pas de problème', 'Kein Problem')
+    has_no_problem = bool(re.search(r"\b(?:no\s+problem|pas\s+de\s+probl[èe]me|kein\s+problem|geen\s+probleem)\b", norm_body, re.IGNORECASE))
+
     # Wir pruefen sowohl den bereinigten Body als auch Fulltext
     for lang_code, patterns in PATTERNS_NEGATIVE.items():
         for pat in patterns:
@@ -449,6 +454,10 @@ def classify_intent(body: str, subject: str = "") -> ClassificationResult:
                 match = re.search(pat, normalize_text(subject), re.IGNORECASE)
             
             if match:
+                matched_str = match.group(0).lower()
+                # Falls z.B. 'kein' oder 'pas' oder 'geen' nur innerhalb von 'kein Problem' / 'pas de problème' vorkommt
+                if has_no_problem and matched_str in ("pas", "kein", "geen", "no"):
+                    continue
                 negative_matches.append(match.group(0))
 
     if negative_matches:
