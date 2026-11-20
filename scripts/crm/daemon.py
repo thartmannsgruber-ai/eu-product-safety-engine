@@ -77,6 +77,8 @@ def run_daemon(poll_interval: int = 15, mail_check_interval: int = 120, max_runs
                     temp_f = offset_file.with_suffix(".tmp")
                     with open(temp_f, "w", encoding="utf-8") as f:
                         json.dump({"offset": telegram_offset, "updated_at": datetime.now(timezone.utc).isoformat()}, f)
+                        f.flush()
+                        os.fsync(f.fileno())
                     temp_f.replace(offset_file)
                     logger.debug(f"[DAEMON] Telegram-Offset gesichert: {telegram_offset}")
                 except Exception as save_err:

@@ -16,6 +16,7 @@ import json
 import logging
 import os
 import socket
+import threading
 import time
 import urllib.parse
 import urllib.request
@@ -74,6 +75,8 @@ class TelegramCRMNotifier:
 
         if not self.bot_token:
             logger.warning("[TelegramBot] Kein TELEGRAM_BOT_TOKEN hinterlegt.")
+
+        self._callback_lock = threading.Lock()
 
     def _api_call(self, method: str, data: Optional[Dict[str, Any]] = None, timeout: int = 10) -> Dict[str, Any]:
         """Fuehrt einen sicheren HTTPS-Call gegen die Telegram Bot API aus."""
@@ -367,31 +370,33 @@ class TelegramCRMNotifier:
             logger.error(f"[TelegramBot] Fehler beim Verarbeiten des Updates: {exc}", exc_info=True)
 
     def _handle_approve_callback(self, cb_id: str, draft_id: str, chat_id: int, msg_id: int, current_text: str, user_name: str) -> None:
-        """Gibt den Entwurf frei und versendet ihn via Resend."""
+        """Gibt den Entwurf frei und versendet ihn via Resend (atomar mit Lock, F-02)."""
         from scripts.crm.review_queue import get_default_queue, DraftStatus
         from scripts.crm.dispatcher import get_default_dispatcher
 
         queue = get_default_queue()
-        draft = queue.get_draft(draft_id)
-        if not draft:
-            self.answer_callback(cb_id, f"Fehler: Draft {draft_id} nicht gefunden!", show_alert=True)
-            return
 
-        current_status = draft.get("status")
+        with self._callback_lock:
+            draft = queue.get_draft(draft_id)
+            if not draft:
+                self.answer_callback(cb_id, f"Fehler: Draft {draft_id} nicht gefunden!", show_alert=True)
+                return
 
-        # F-02: Idempotenz-Schutz
-        if current_status in (DraftStatus.APPROVED, DraftStatus.SENT):
-            self.answer_callback(cb_id, "ℹ️ Dieser Entwurf wurde bereits freigegeben/versendet!", show_alert=True)
-            return
-        if current_status == DraftStatus.REJECTED:
-            self.answer_callback(cb_id, "⚠️ Dieser Entwurf wurde abgelehnt und kann nicht mehr freigegeben werden.", show_alert=True)
-            return
-        if current_status != DraftStatus.PENDING_REVIEW:
-            self.answer_callback(cb_id, f"⚠️ Ungültiger Entwurfsstatus: {current_status}", show_alert=True)
-            return
+            current_status = draft.get("status")
 
-        # Statuswechsel atomar auf APPROVED setzen
-        queue.approve(draft_id, reviewer=f"Telegram ({user_name})")
+            # F-02: Idempotenz-Schutz
+            if current_status in (DraftStatus.APPROVED, DraftStatus.SENT):
+                self.answer_callback(cb_id, "ℹ️ Dieser Entwurf wurde bereits freigegeben/versendet!", show_alert=True)
+                return
+            if current_status == DraftStatus.REJECTED:
+                self.answer_callback(cb_id, "⚠️ Dieser Entwurf wurde abgelehnt und kann nicht mehr freigegeben werden.", show_alert=True)
+                return
+            if current_status != DraftStatus.PENDING_REVIEW:
+                self.answer_callback(cb_id, f"⚠️ Ungültiger Entwurfsstatus: {current_status}", show_alert=True)
+                return
+
+            # Statuswechsel atomar auf APPROVED setzen
+            queue.approve(draft_id, reviewer=f"Telegram ({user_name})")
 
         # Versenden via Dispatcher
         dispatcher = get_default_dispatcher()
@@ -417,22 +422,25 @@ class TelegramCRMNotifier:
         self.edit_message_text(updated_text, chat_id=chat_id, message_id=msg_id, reply_markup=None)
 
     def _handle_reject_callback(self, cb_id: str, draft_id: str, chat_id: int, msg_id: int, current_text: str, user_name: str) -> None:
-        """Lehnt einen Entwurf ab."""
+        """Lehnt einen Entwurf ab (atomar mit Lock, F-02)."""
         from scripts.crm.review_queue import get_default_queue, DraftStatus
         queue = get_default_queue()
-        draft = queue.get_draft(draft_id)
-        if not draft:
-            self.answer_callback(cb_id, f"Fehler: Draft {draft_id} nicht gefunden!", show_alert=True)
-            return
 
-        current_status = draft.get("status")
+        with self._callback_lock:
+            draft = queue.get_draft(draft_id)
+            if not draft:
+                self.answer_callback(cb_id, f"Fehler: Draft {draft_id} nicht gefunden!", show_alert=True)
+                return
 
-        # F-02: Idempotenz-Schutz
-        if current_status != DraftStatus.PENDING_REVIEW:
-            self.answer_callback(cb_id, f"ℹ️ Entwurf ist nicht mehr offen (Status: {current_status})!", show_alert=True)
-            return
+            current_status = draft.get("status")
 
-        queue.reject(draft_id, reviewer=f"Telegram ({user_name})", reason=f"Abgelehnt via Telegram durch {user_name}")
+            # F-02: Idempotenz-Schutz
+            if current_status != DraftStatus.PENDING_REVIEW:
+                self.answer_callback(cb_id, f"ℹ️ Entwurf ist nicht mehr offen (Status: {current_status})!", show_alert=True)
+                return
+
+            queue.reject(draft_id, reviewer=f"Telegram ({user_name})", reason=f"Abgelehnt via Telegram durch {user_name}")
+
         self.answer_callback(cb_id, "❌ Entwurf abgelehnt.")
 
         now_str = datetime.now(timezone.utc).strftime("%d.%m.%Y %H:%M UTC")

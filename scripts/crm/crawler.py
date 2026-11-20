@@ -20,6 +20,7 @@ import imaplib
 import json
 import os
 import re
+import unicodedata
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
@@ -442,18 +443,19 @@ class InboundMailCrawler:
         if not lead_obj:
             to_raw = (parsed.get("to") or "").lower()
             from_raw = (parsed.get("from_raw") or "").lower()
-            subject_raw = (parsed.get("subject") or "").lower()
-            body_raw = (parsed.get("body") or "").lower()
+            subject_raw = unicodedata.normalize("NFKC", str(parsed.get("subject") or "")).casefold().replace("’", "'")
+            body_raw = unicodedata.normalize("NFKC", str(parsed.get("body") or "")).casefold().replace("’", "'")
             
             is_campaign_target = "thfc-consulting.de" in to_raw or "thfc-consulting.de" in from_raw
             has_campaign_keywords = any(kw in subject_raw or kw in body_raw for kw in [
-                "safety gate", "rapex", "produktsicherheit", "sécurité", "veiligheid", 
-                "gtin", "spielwaren", "jouet", "speelgoed", "compliance", "rückruf", "rappel"
+                "safety gate", "rapex", "produktsicherheit", "sécurité", "securite", "veiligheid", 
+                "gtin", "spielwaren", "jouet", "speelgoed", "compliance", "rückruf", "ruckruf", "rappel"
             ])
-            # F-04: Goldene Regel absichern - Opt-Out-Signalwoerter duerfen nie als unrelated verworfen werden
+            # F-04: Goldene Regel absichern - Opt-Out-Signalwoerter (multilingual inkl. Apostroph-Varianten) nie als unrelated verwerfen
             has_optout_keywords = any(kw in subject_raw or kw in body_raw for kw in [
-                "nein", "kein interesse", "stop", "unsubscribe", "abmelden",
-                "pas d'intérêt", "non merci", "geen interesse", "nee", "niet geïnteresseerd"
+                "nein", "kein interesse", "kein bedarf", "nicht mehr kontaktieren", "austragen", "abmelden",
+                "stop", "unsubscribe", "remove", "pas d'intérêt", "pas d'interet", "non merci", "désinscrire", "desinscrire",
+                "geen interesse", "nee", "niet geïnteresseerd", "niet geinteresseerd", "afmelden", "uitschrijven"
             ])
             # Falls weder Kampagnen-Zieladresse noch relevante Keywords oder Opt-Outs -> als unbeteiligte Mail ignorieren
             if not is_campaign_target and not has_campaign_keywords and not has_optout_keywords:

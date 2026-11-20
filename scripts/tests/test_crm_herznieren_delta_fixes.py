@@ -136,6 +136,44 @@ class TestHerznierenDeltaFixes(unittest.TestCase):
             # Callback-Antwort muss Idempotenz-Warnung melden
             mock_answer.assert_called_with("cb_2", "ℹ️ Dieser Entwurf wurde bereits freigegeben/versendet!", show_alert=True)
 
+    def test_approve_callback_multithreaded_race_condition(self):
+        """F-02: Zwei parallele Threads versuchen zeitgleich freizugeben -> genau 1 Dispatch!"""
+        import threading
+        queue = ReviewQueue(queue_file=self.queue_file)
+        draft = queue.add_draft({
+            "draft_id": "draft_race_test",
+            "recipient_email": "lead@test.com",
+            "subject": "Race Test",
+            "body": "Body",
+            "status": DraftStatus.PENDING_REVIEW,
+        })
+
+        with patch("scripts.crm.review_queue.get_default_queue", return_value=queue), \
+             patch("scripts.crm.dispatcher.get_default_dispatcher") as mock_disp_factory, \
+             patch.object(self.bot, "answer_callback"), \
+             patch.object(self.bot, "edit_message_text"):
+
+            mock_dispatcher = MagicMock()
+            mock_dispatcher.dispatch_draft.return_value = {"success": True, "message_id": "resend_race"}
+            mock_disp_factory.return_value = mock_dispatcher
+
+            t1 = threading.Thread(
+                target=self.bot._handle_approve_callback,
+                args=("cb_t1", "draft_race_test", 8944878295, 1, "txt", "Thomas")
+            )
+            t2 = threading.Thread(
+                target=self.bot._handle_approve_callback,
+                args=("cb_t2", "draft_race_test", 8944878295, 1, "txt", "Thomas")
+            )
+
+            t1.start()
+            t2.start()
+            t1.join()
+            t2.join()
+
+            # Genau ein Aufruf an dispatch_draft!
+            self.assertEqual(mock_dispatcher.dispatch_draft.call_count, 1)
+
     # -----------------------------------------------------------------------
     # F-03: Offset-Persistenz im Daemon
     # -----------------------------------------------------------------------
@@ -194,6 +232,30 @@ class TestHerznierenDeltaFixes(unittest.TestCase):
 
         # Muss sofort geblacklistet sein!
         self.assertTrue(blacklist.is_blacklisted("unbekannter_lead@firma.de"))
+
+    def test_crawler_relevance_filter_handles_french_typographical_apostrophe(self):
+        """F-04: 'Pas d’intérêt' mit typografischem Apostroph wird nicht verworfen und geblacklistet."""
+        storage = CRMStorage(leads_file=self.leads_file)
+        blacklist = BlacklistManager(blacklist_file=self.blacklist_file)
+
+        crawler = InboundMailCrawler(
+            storage=storage,
+            blacklist_mgr=blacklist,
+            state_file=self.state_file,
+            auto_draft=False,
+        )
+
+        msg = {
+            "from": "jouet_france@societe.fr",
+            "to": "info@thfc-consulting.de",
+            "subject": "Re: Proposition",
+            "body": "Bonjour,\nNous n’avons pas d’intérêt pour votre service.\nMerci de nous désinscrire.",
+            "message_id": "<optout-apostrophe-fr@societe.fr>",
+        }
+
+        res = crawler.process_message(msg)
+        self.assertEqual(res["status"], "PROCESSED")
+        self.assertTrue(blacklist.is_blacklisted("jouet_france@societe.fr"))
 
 
 if __name__ == "__main__":
