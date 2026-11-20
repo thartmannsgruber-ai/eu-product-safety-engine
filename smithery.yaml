@@ -1,8 +1,11 @@
-# Smithery.ai MCP Server Configuration
-# Start command: node apps/mcp/dist/index.js
+# Smithery configuration file: https://smithery.ai/docs/config#smitheryyaml
 startCommand:
   type: stdio
-  config: {}
-  command: node
-  args:
-    - apps/mcp/dist/index.js
+  configSchema:
+    type: object
+    properties: {}
+  commandFunction: |-
+    (config) => ({
+      command: 'node',
+      args: ['apps/mcp/dist/index.js']
+    })
