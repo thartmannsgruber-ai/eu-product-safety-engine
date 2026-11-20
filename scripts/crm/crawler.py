@@ -460,6 +460,12 @@ class InboundMailCrawler:
                 reason=classification.reason,
                 snippet=snippet
             )
+            # Telegram-Push fuer Opt-Out (Goldene Regel)
+            try:
+                from scripts.crm.telegram_bot import get_default_bot
+                get_default_bot().notify_optout(target_email, reason=classification.reason, snippet=snippet)
+            except Exception:
+                pass
         elif classification.intent == Intent.POSITIVE_TEST_REQUEST:
             self.storage.update_lead_status(
                 target_email,
@@ -497,6 +503,15 @@ class InboundMailCrawler:
                     draft_id = generated_draft.get("draft_id")
                 elif hasattr(generated_draft, "draft_id"):
                     draft_id = getattr(generated_draft, "draft_id")
+
+                # Telegram-Push fuer neuen Entwurf (Human-in-the-Loop)
+                if generated_draft:
+                    try:
+                        from scripts.crm.telegram_bot import get_default_bot
+                        draft_payload = generated_draft if isinstance(generated_draft, dict) else (getattr(generated_draft, "__dict__", {}) or {})
+                        get_default_bot().notify_new_draft(draft_payload)
+                    except Exception:
+                        pass
             except Exception:
                 pass
 

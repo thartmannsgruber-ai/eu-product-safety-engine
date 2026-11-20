@@ -408,6 +408,54 @@ def cmd_scan(args: argparse.Namespace) -> int:
         return 1
 
 
+def cmd_bot(args: argparse.Namespace) -> int:
+    """Verwaltet den 2-Wege Telegram Bot."""
+    from scripts.crm.telegram_bot import get_default_bot
+    bot = get_default_bot()
+
+    action = getattr(args, "bot_action", "status")
+
+    if action == "status":
+        me = bot.get_me()
+        print("\n=================================================================")
+        print("          PRODUCT SAFETY ENGINE - TELEGRAM BOT STATUS")
+        print("=================================================================")
+        if me.get("ok"):
+            res = me.get("result", {})
+            print(f"Bot Name:      {res.get('first_name')}")
+            print(f"Username:      @{res.get('username')}")
+            print(f"Bot ID:        {res.get('id')}")
+            print(f"Link:          https://t.me/{res.get('username')}")
+            print(f"Chat-ID:       {bot.chat_id or '[NOCH NICHT GEKOPPELT - Drücke Start auf Telegram!]'}")
+            print("Status:        ONLINE (Bereit für Push & HITL-Freigaben)")
+        else:
+            print(f"[ERROR] Bot Verbindung fehlgeschlagen: {me.get('error')}")
+        print("=================================================================\n")
+        return 0
+
+    elif action == "poll":
+        updates = bot.get_updates()
+        print(f"[BOT] {len(updates)} Telegram Updates empfangen.")
+        for u in updates:
+            bot.handle_update(u)
+        print(f"[BOT] Chat-ID Status: {bot.chat_id or 'Noch keine Chat-ID erfasst'}")
+        return 0
+
+    elif action == "test":
+        if not bot.chat_id:
+            print("[ERROR] Keine Chat-ID hinterlegt! Bitte zuerst t.me/ProductSafety_communicationbot öffnen und /start drücken.")
+            return 1
+        res = bot.send_message("👋 <b>Test-Push von der ProductSafetyEngine</b>\nVerbindung steht! Human-in-the-Loop Freigaben kommen hier an.")
+        if res.get("ok"):
+            print("[SUCCESS] Test-Nachricht erfolgreich an Thomas' iPhone gesendet!")
+            return 0
+        else:
+            print(f"[ERROR] Senden fehlgeschlagen: {res.get('error')}")
+            return 1
+
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Erstellt den ArgumentParser mit allen CLI-Befehlen."""
     parser = argparse.ArgumentParser(
@@ -469,6 +517,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_scan.add_argument("--folder", type=str, default="INBOX", help="IMAP-Ordner (Default: INBOX)")
     p_scan.add_argument("--all", action="store_true", default=False, help="Alle Nachrichten scannen (Default: nur ungelesene)")
 
+    # 9. bot
+    p_bot = subparsers.add_parser("bot", help="Verwaltet den Telegram Bot (status, poll, test)")
+    p_bot.add_argument("bot_action", choices=["status", "poll", "test"], nargs="?", default="status", help="Aktion (Default: status)")
+
     return parser
 
 
@@ -489,6 +541,7 @@ def main() -> int:
         "send": cmd_send,
         "blacklist": cmd_blacklist,
         "scan": cmd_scan,
+        "bot": cmd_bot,
     }
 
     handler = command_map.get(args.command)
