@@ -142,8 +142,10 @@ def extract_eans(text: str, validate_checksum: bool = False) -> List[str]:
     for item in found:
         if item in seen:
             continue
-        # Telefonnummern oder Jahreszahlen ausschliessen, wenn keine Validierung gewuenscht
-        # z.B. 20261119 ist 8 Ziffern, aber ein Datum.
+        # Telefonnummern oder Jahreszahlen ausschliessen
+        # z.B. Mobilfunk DE (015..., 016..., 017...), FR/NL (06..., 07...) mit typischer Rufnummernlaenge
+        if item.startswith(("015", "016", "017", "018", "019")) and len(item) in (10, 11, 12):
+            continue
         if validate_checksum:
             if validate_gtin_checksum(item):
                 unique_eans.append(item)

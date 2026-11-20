@@ -325,7 +325,7 @@ class TelegramCRMNotifier:
             return
 
         # Freigeben
-        queue.approve_draft(draft_id, reviewed_by=f"Telegram ({user_name})")
+        queue.approve(draft_id, reviewed_by=f"Telegram ({user_name})")
 
         # Versenden via Dispatcher
         dispatcher = get_default_dispatcher()
@@ -354,7 +354,7 @@ class TelegramCRMNotifier:
         """Lehnt einen Entwurf ab."""
         from scripts.crm.review_queue import get_default_queue
         queue = get_default_queue()
-        queue.reject_draft(draft_id, reason=f"Abgelehnt via Telegram durch {user_name}")
+        queue.reject(draft_id, reason=f"Abgelehnt via Telegram durch {user_name}")
         self.answer_callback(cb_id, "❌ Entwurf abgelehnt.")
 
         now_str = datetime.now(timezone.utc).strftime("%d.%m.%Y %H:%M UTC")
@@ -388,23 +388,23 @@ class TelegramCRMNotifier:
         from scripts.crm.blacklist import get_default_manager
 
         leads = get_default_storage().list_leads()
-        queue_stats = get_default_queue().stats()
+        queue_stats = get_default_queue().count_by_status()
         bl_count = len(get_default_manager().list_entries())
 
         text = (
             f"📊 <b>ProductSafetyEngine CRM Status</b>\n\n"
             f"👥 <b>Gesamtanzahl Leads:</b> {len(leads)}\n"
-            f"⏳ <b>Wartend auf Freigabe:</b> {queue_stats.get('pending_review', 0)}\n"
-            f"✅ <b>Erfolgreich versendet:</b> {queue_stats.get('sent', 0)}\n"
-            f"❌ <b>Abgelehnt:</b> {queue_stats.get('rejected', 0)}\n"
+            f"⏳ <b>Wartend auf Freigabe:</b> {queue_stats.get('PENDING_REVIEW', 0)}\n"
+            f"✅ <b>Erfolgreich versendet:</b> {queue_stats.get('SENT', 0)}\n"
+            f"❌ <b>Abgelehnt:</b> {queue_stats.get('REJECTED', 0)}\n"
             f"🛡️ <b>Opt-Out Blacklist:</b> {bl_count} Adressen"
         )
         self.send_message(text, chat_id=chat_id)
 
     def _send_queue_reply(self, chat_id: int) -> None:
         """Sendet Liste wartender Entwuerfe auf /queue."""
-        from scripts.crm.review_queue import get_default_queue
-        pending = get_default_queue().list_pending()
+        from scripts.crm.review_queue import get_default_queue, DraftStatus
+        pending = get_default_queue().list_drafts(status=DraftStatus.PENDING_REVIEW)
         if not pending:
             self.send_message("🎉 Die Review-Queue ist aktuell leer. Keine offenen Entwürfe!", chat_id=chat_id)
             return

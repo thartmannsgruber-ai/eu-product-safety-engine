@@ -437,6 +437,29 @@ class InboundMailCrawler:
         )
         target_email = lead_email or parsed["from_email"]
 
+        # Relevanz-Pruefung fuer Sammelpostfaecher:
+        # Falls kein bekannter Kampagnen-Lead gematcht wurde, pruefen ob Nachricht Kampagnen-Bezug hat
+        if not lead_obj:
+            to_raw = (parsed.get("to") or "").lower()
+            from_raw = (parsed.get("from_raw") or "").lower()
+            subject_raw = (parsed.get("subject") or "").lower()
+            body_raw = (parsed.get("body") or "").lower()
+            
+            is_campaign_target = "thfc-consulting.de" in to_raw or "thfc-consulting.de" in from_raw
+            has_campaign_keywords = any(kw in subject_raw or kw in body_raw for kw in [
+                "safety gate", "rapex", "produktsicherheit", "sécurité", "veiligheid", 
+                "gtin", "spielwaren", "jouet", "speelgoed", "compliance", "rückruf", "rappel"
+            ])
+            # Falls weder Kampagnen-Zieladresse noch relevante Keywords -> als unbeteiligte Mail ignorieren
+            if not is_campaign_target and not has_campaign_keywords:
+                self.mark_processed(msg_id, details={"status": "IGNORED_UNRELATED", "from": parsed["from_email"]})
+                return {
+                    "status": "IGNORED_UNRELATED",
+                    "message_id": msg_id,
+                    "from_email": parsed["from_email"],
+                    "skipped": True,
+                }
+
         # 3. Intent klassifizieren
         classification: ClassificationResult = classify_intent(
             body=parsed["body"],
