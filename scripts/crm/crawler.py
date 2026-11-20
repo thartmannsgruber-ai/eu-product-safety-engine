@@ -46,6 +46,8 @@ from scripts.crm.storage import (
     get_default_storage,
 )
 
+_HTML_STRIP_RE = re.compile(r"<[^>]+>")
+
 
 def load_env_crawler() -> Dict[str, str]:
     """Laedt Umgebungsvariablen aus lokalen .env Dateien falls vorhanden."""
@@ -118,7 +120,7 @@ def extract_message_body(msg: Union[email.message.Message, Any]) -> str:
                     try:
                         html = payload.decode(charset, errors="replace")
                         # Einfaches HTML-Tag Stripping als Fallback
-                        text = re.sub(r"<[^>]+>", " ", html)
+                        text = _HTML_STRIP_RE.sub(" ", html)
                         body_parts.append(text)
                     except Exception:
                         pass
@@ -894,7 +896,7 @@ class InboundMailCrawler:
                             # Body ermitteln
                             body_content = msg.get("body", {}).get("content", "")
                             if msg.get("body", {}).get("contentType", "").lower() == "html":
-                                body_content = re.sub(r"<[^>]+>", " ", body_content)
+                                body_content = _HTML_STRIP_RE.sub(" ", body_content)
                             if not body_content:
                                 body_content = msg.get("bodyPreview", "")
 
