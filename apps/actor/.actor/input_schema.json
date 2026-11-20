@@ -7,13 +7,18 @@
       "title": "EAN / Barcode",
       "type": "string",
       "description": "EAN-8, EAN-13, UPC or GTIN barcode to verify against EU Safety Gate recalls (e.g. '5054298241091').",
-      "editor": "textfield"
+      "editor": "textfield",
+      "prefill": "5054298241091"
     },
     "eans": {
       "title": "Batch EANs / Barcodes",
       "type": "array",
       "description": "Array of EAN-8, EAN-13, UPC or GTIN barcodes for batch screening of e-commerce catalogs (e.g. ['5054298241091', '4099979071513']).",
       "editor": "stringList",
+      "prefill": [
+        "5054298241091",
+        "4099979071513"
+      ],
       "items": {
         "type": "string"
       }
@@ -22,7 +27,8 @@
       "title": "Category / Kategorie",
       "type": "string",
       "description": "Product category to filter alerts (e.g. 'Toys', 'Cosmetics', 'Electrical appliances', 'Motor vehicles').",
-      "editor": "textfield"
+      "editor": "textfield",
+      "prefill": "Toys"
     },
     "query": {
       "title": "Search Query / Suchbegriff",
