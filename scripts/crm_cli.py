@@ -675,7 +675,74 @@ def build_parser() -> argparse.ArgumentParser:
     p_jur_comp = p_jur_sub.add_parser("complete", help="Markiert einen LinkedIn-Task als erledigt")
     p_jur_comp.add_argument("task_id", type=str, help="ID des Tasks")
 
+    # 13. checkout
+    p_chk = subparsers.add_parser("checkout", help="Erzeugt Stripe Checkout-Zahlungslinks fuer B2B Audits (Feature F08)")
+    p_chk.add_argument("--package", "-p", required=True, help="Paket: portfolio_audit (490) oder audit_plus (1490)")
+    p_chk.add_argument("--email", "-e", required=True, help="E-Mail-Adresse des Kunden/Leads")
+    p_chk.add_argument("--company", "-c", default="", help="Unternehmensname")
+    p_chk.add_argument("--lead-id", "-l", default="", help="Optionale Lead-ID")
+    p_chk.add_argument("--steuer-id", "-t", default="", help="USt-IdNr. / Steuer-ID")
+    p_chk.add_argument("--format", "-f", choices=["link", "text", "markdown", "json"], default="link", help="Ausgabeformat")
+    p_chk.add_argument("--lang", choices=["de", "en", "fr", "nl"], default="de", help="Sprache fuer Snippet")
+    p_chk.add_argument("--dry-run", action="store_true", default=False, help="Test-/Mock-Link")
+
     return parser
+
+
+def cmd_checkout(args: argparse.Namespace) -> int:
+    """Erzeugt Stripe-Checkout-Links fuer B2B High-Ticket Audits (Feature F08)."""
+    from scripts.crm.stripe_checkout import (
+        create_checkout_session,
+        generate_pitch_snippet,
+        get_package,
+    )
+
+    try:
+        pkg = get_package(args.package)
+    except ValueError as e:
+        print(f"[FEHLER] {e}", file=sys.stderr)
+        return 1
+
+    company_name = args.company
+    if not company_name and "@" in args.email:
+        domain = args.email.split("@")[-1]
+        company_name = domain.split(".")[0].capitalize()
+
+    try:
+        session = create_checkout_session(
+            package=pkg,
+            email=args.email,
+            company=company_name,
+            lead_id=args.lead_id,
+            steuer_id=args.steuer_id,
+            dry_run=args.dry_run,
+        )
+    except Exception as e:
+        print(f"[FEHLER] Checkout-Session konnte nicht erstellt werden: {e}", file=sys.stderr)
+        return 1
+
+    url = session.get("url") or session.get("payment_link") or ""
+
+    if args.format == "link":
+        print(url)
+    elif args.format == "json":
+        print(json.dumps(session, indent=2, ensure_ascii=False))
+    elif args.format == "text":
+        snippet = generate_pitch_snippet(
+            package=pkg,
+            checkout_url=url,
+            company=company_name,
+            language=args.lang,
+        )
+        print(snippet)
+    elif args.format == "markdown":
+        print(f"### B2B Checkout: {pkg.name} ({pkg.amount_eur} € zzgl. USt.)")
+        print(f"- **Unternehmen:** {company_name}")
+        print(f"- **Lead-ID / E-Mail:** {session['metadata'].get('lead_id')} ({args.email})")
+        print(f"- **Steuer-ID:** {args.steuer_id or 'Keine hinterlegt'}")
+        print(f"\n[**Jetzt gesichert beauftragen ({pkg.name})**]({url})")
+
+    return 0
 
 
 def main() -> int:
@@ -699,6 +766,7 @@ def main() -> int:
         "cleanup": cmd_cleanup,
         "followup": cmd_followup,
         "jurisdiction": cmd_jurisdiction,
+        "checkout": cmd_checkout,
     }
 
     handler = command_map.get(args.command)

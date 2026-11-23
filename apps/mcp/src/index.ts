@@ -13,6 +13,7 @@ export * from './sanitizer.js';
 export * from './server.js';
 export * from './tools.js';
 export * from './payment.js';
+export * from './stripe.js';
 
 // Automatische Server-Initialisierung bei direktem Start als CLI/Binary
 function isDirectExecution(): boolean {

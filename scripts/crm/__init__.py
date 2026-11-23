@@ -84,6 +84,22 @@ from scripts.crm.followup_engine import (
     get_default_jurisdiction_gate,
     get_default_linkedin_mgr,
 )
+from scripts.crm.stripe_checkout import (
+    AUDIT_PLUS,
+    PORTFOLIO_AUDIT,
+    AuditOrderStorage,
+    B2BMetadata,
+    PackageInfo,
+    StripeSignatureVerificationError,
+    build_b2b_metadata,
+    create_checkout_session,
+    generate_checkout_link,
+    generate_pitch_snippet,
+    get_package,
+    handle_webhook,
+    unlock_audit_order,
+    verify_webhook_signature,
+)
 from scripts.crm.storage import (
     CRMStorage,
     LeadStatus,
@@ -179,4 +195,19 @@ __all__ = [
     "get_default_followup_engine",
     "get_default_jurisdiction_gate",
     "get_default_linkedin_mgr",
+    # Stripe Checkout & B2B Audit Packages
+    "PORTFOLIO_AUDIT",
+    "AUDIT_PLUS",
+    "PackageInfo",
+    "B2BMetadata",
+    "AuditOrderStorage",
+    "StripeSignatureVerificationError",
+    "get_package",
+    "build_b2b_metadata",
+    "create_checkout_session",
+    "generate_checkout_link",
+    "generate_pitch_snippet",
+    "verify_webhook_signature",
+    "unlock_audit_order",
+    "handle_webhook",
 ]
