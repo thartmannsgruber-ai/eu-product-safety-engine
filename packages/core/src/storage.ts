@@ -564,10 +564,18 @@ export class SqliteAlertStorage implements IAlertStorage {
       );
 
       CREATE INDEX IF NOT EXISTS idx_alert_eans_ean ON alert_eans(ean);
+      CREATE INDEX IF NOT EXISTS idx_alerts_brand ON alerts(brand);
       CREATE INDEX IF NOT EXISTS idx_alerts_category ON alerts(category);
+      CREATE INDEX IF NOT EXISTS idx_alerts_year ON alerts(year);
+      CREATE INDEX IF NOT EXISTS idx_alerts_week ON alerts(week);
       CREATE INDEX IF NOT EXISTS idx_alerts_publication_date ON alerts(publication_date);
       CREATE INDEX IF NOT EXISTS idx_alerts_year_week ON alerts(year, week);
     `);
+  }
+
+  public getIndexNames(): string[] {
+    const rows = this.db.prepare("SELECT name FROM sqlite_master WHERE type = 'index' AND name NOT LIKE 'sqlite_autoindex%'").all() as { name: string }[];
+    return rows.map((r) => r.name);
   }
 
   private mapRowToAlertRecord(row: Record<string, unknown>): AlertRecord {
