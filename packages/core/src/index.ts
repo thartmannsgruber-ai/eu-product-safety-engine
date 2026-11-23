@@ -7,3 +7,4 @@ export * from './asin.js';
 export * from './identifier.js';
 export * from './csv.js';
 export * from './webhook.js';
+export * from './matcher.js';
