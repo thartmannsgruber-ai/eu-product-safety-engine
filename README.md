@@ -3,6 +3,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x%20strict-blue.svg)](https://www.typescriptlang.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-22.x-green.svg)](https://nodejs.org/)
 [![Vitest](https://img.shields.io/badge/Tests-Vitest%20100%25%20Offline-brightgreen.svg)](https://vitest.dev/)
+[![Glama MCP server](https://glama.ai/mcp/servers/thartmannsgruber-ai/eu-product-safety-engine/badges/score.svg)](https://glama.ai/mcp/servers/thartmannsgruber-ai/eu-product-safety-engine)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 > **High-Performance B2B Data Engine & Model Context Protocol (MCP) Server für EU-Produktsicherheits- und Rückrufdaten (Safety Gate / RAPEX & REACH Chemical Recall Screening).**
