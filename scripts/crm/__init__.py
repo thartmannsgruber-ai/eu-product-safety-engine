@@ -78,9 +78,11 @@ from scripts.crm.storage import (
     CRMStorage,
     LeadStatus,
     VALID_LEAD_STATUSES,
+    cleanup_leads_db,
     get_lead,
     init_from_campaign,
     list_leads,
+    sanitize_leads,
     update_lead_status,
 )
 
@@ -100,6 +102,8 @@ __all__ = [
     "update_lead_status",
     "list_leads",
     "init_from_campaign",
+    "sanitize_leads",
+    "cleanup_leads_db",
     # Classifier
     "Intent",
     "VALID_INTENTS",

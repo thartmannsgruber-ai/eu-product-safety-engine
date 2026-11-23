@@ -34,14 +34,18 @@ from scripts.crm.blacklist import (
 
 
 class LeadStatus:
+    NOT_SENT = "NOT_SENT"
     OUTREACH_SENT = "OUTREACH_SENT"
+    FOLLOWUP_SENT = "FOLLOWUP_SENT"
     REPLIED_POSITIVE = "REPLIED_POSITIVE"
     REPLIED_INQUIRY = "REPLIED_INQUIRY"
     LOST_BLACKLISTED = "LOST_BLACKLISTED"
 
 
 VALID_LEAD_STATUSES = {
+    LeadStatus.NOT_SENT,
     LeadStatus.OUTREACH_SENT,
+    LeadStatus.FOLLOWUP_SENT,
     LeadStatus.REPLIED_POSITIVE,
     LeadStatus.REPLIED_INQUIRY,
     LeadStatus.LOST_BLACKLISTED,
@@ -181,8 +185,9 @@ class CRMStorage:
             if self.blacklist_mgr.is_blacklisted(norm_email):
                 status = LeadStatus.LOST_BLACKLISTED
             else:
-                # Falls Lead schon einen Status hat, belassen; sonst OUTREACH_SENT
-                status = lead.get("status", LeadStatus.OUTREACH_SENT)
+                # Falls Lead schon einen Status hat, belassen; sonst OUTREACH_SENT (wenn in sent_log) bzw. NOT_SENT
+                default_status = LeadStatus.OUTREACH_SENT if norm_email in sent_log_data else LeadStatus.NOT_SENT
+                status = lead.get("status", default_status)
 
             company = s_info.get("company") or c_info.get("company") or lead.get("company") or ""
             country = s_info.get("country") or c_info.get("country") or lead.get("country") or ""
@@ -374,6 +379,73 @@ class CRMStorage:
                 counts[st] += 1
         return counts
 
+    def sanitize_leads(
+        self,
+        sent_log_path: Optional[str | Path] = None,
+    ) -> Dict[str, Any]:
+        """
+        Bereinigt Leads in leads_db.json durch Abgleich mit sent_log.json:
+        - 24 Leads (FR/NL) in sent_log.json behalten OUTREACH_SENT.
+        - 29 ungesendete Leads (IT, PL, ES, AT) nicht in sent_log.json werden auf NOT_SENT korrigiert.
+        - Geblockte Leads im Status LOST_BLACKLISTED bleiben unangetastet.
+        """
+        base_dir = Path(__file__).resolve().parent.parent.parent
+        sent_file = Path(sent_log_path) if sent_log_path else base_dir / ".market" / "leads" / "sent_log.json"
+
+        sent_emails = set()
+        if sent_file.exists():
+            try:
+                with open(sent_file, "r", encoding="utf-8") as f:
+                    s_data = json.load(f)
+                    if isinstance(s_data, dict):
+                        for k in s_data.keys():
+                            norm_k = normalize_email(k)
+                            if norm_k:
+                                sent_emails.add(norm_k)
+                    elif isinstance(s_data, list):
+                        for item in s_data:
+                            if isinstance(item, dict) and "email" in item:
+                                norm_k = normalize_email(item["email"])
+                                if norm_k:
+                                    sent_emails.add(norm_k)
+            except Exception as e:
+                print(f"[WARN] Failed to load sent_log file: {e}")
+
+        now_iso = datetime.now(timezone.utc).isoformat()
+        corrected_to_not_sent = 0
+        kept_outreach_sent = 0
+        kept_lost_blacklisted = 0
+        updated_emails = []
+
+        for email, lead in self._leads.items():
+            current_status = lead.get("status")
+
+            # 1. Geblockte Leads bleiben unangetastet (Goldene Regel)
+            if current_status == LeadStatus.LOST_BLACKLISTED or self.blacklist_mgr.is_blacklisted(email):
+                lead["status"] = LeadStatus.LOST_BLACKLISTED
+                kept_lost_blacklisted += 1
+                continue
+
+            # 2. Leads in sent_log behalten OUTREACH_SENT
+            if email in sent_emails:
+                lead["status"] = LeadStatus.OUTREACH_SENT
+                kept_outreach_sent += 1
+            else:
+                # 3. Nicht gesendete Leads werden auf NOT_SENT korrigiert
+                lead["status"] = LeadStatus.NOT_SENT
+                lead["updated_at"] = now_iso
+                corrected_to_not_sent += 1
+                updated_emails.append(email)
+
+        self.save()
+        return {
+            "total": len(self._leads),
+            "corrected_to_not_sent": corrected_to_not_sent,
+            "kept_outreach_sent": kept_outreach_sent,
+            "kept_lost_blacklisted": kept_lost_blacklisted,
+            "updated_emails": updated_emails,
+        }
+
 
 # Globales Singleton fuer direkte Modulnutzung
 _default_storage: Optional[CRMStorage] = None
@@ -421,3 +493,17 @@ def can_contact(email: str) -> bool:
 
 def assert_can_contact(email: str) -> None:
     return get_default_storage().assert_can_contact(email)
+
+
+def sanitize_leads(sent_log_path: Optional[str | Path] = None) -> Dict[str, Any]:
+    return get_default_storage().sanitize_leads(sent_log_path=sent_log_path)
+
+
+def cleanup_leads_db(
+    leads_path: Optional[str | Path] = None,
+    sent_log_path: Optional[str | Path] = None,
+    blacklist_mgr: Optional[BlacklistManager] = None,
+) -> Dict[str, Any]:
+    storage = CRMStorage(leads_file=leads_path, blacklist_mgr=blacklist_mgr)
+    return storage.sanitize_leads(sent_log_path=sent_log_path)
+

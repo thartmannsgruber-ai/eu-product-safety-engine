@@ -78,7 +78,9 @@ def cmd_status(args: argparse.Namespace) -> int:
 
     print("\n[1] LEADS LIFECYCLE (leads_db.json):")
     print(f"    Gesamtanzahl Leads:      {len(leads)}")
+    print(f"    - NOT_SENT:              {lead_counts.get(LeadStatus.NOT_SENT, 0)}")
     print(f"    - OUTREACH_SENT:         {lead_counts.get(LeadStatus.OUTREACH_SENT, 0)}")
+    print(f"    - FOLLOWUP_SENT:         {lead_counts.get(LeadStatus.FOLLOWUP_SENT, 0)}")
     print(f"    - REPLIED_POSITIVE:      {lead_counts.get(LeadStatus.REPLIED_POSITIVE, 0)}")
     print(f"    - REPLIED_INQUIRY:       {lead_counts.get(LeadStatus.REPLIED_INQUIRY, 0)}")
     print(f"    - LOST_BLACKLISTED:      {lead_counts.get(LeadStatus.LOST_BLACKLISTED, 0)}")
@@ -408,6 +410,21 @@ def cmd_scan(args: argparse.Namespace) -> int:
         return 1
 
 
+def cmd_cleanup(args: argparse.Namespace) -> int:
+    """Bereinigt die Leads-Datenbank durch Abgleich mit sent_log.json."""
+    from scripts.crm.storage import cleanup_leads_db
+    stats = cleanup_leads_db()
+    print("\n" + "=" * 65)
+    print("        CRM LEADS DATABASE SANITATION (Feature F06)")
+    print("=" * 65)
+    print(f"    Gesamtanzahl Leads:            {stats['total']}")
+    print(f"    Korrigiert auf NOT_SENT:       {stats['corrected_to_not_sent']}")
+    print(f"    Bestehend OUTREACH_SENT:       {stats['kept_outreach_sent']}")
+    print(f"    Bestehend LOST_BLACKLISTED:    {stats['kept_lost_blacklisted']}")
+    print("=" * 65 + "\n")
+    return 0
+
+
 def cmd_bot(args: argparse.Namespace) -> int:
     """Verwaltet den 2-Wege Telegram Bot."""
     from scripts.crm.telegram_bot import get_default_bot
@@ -521,6 +538,9 @@ def build_parser() -> argparse.ArgumentParser:
     p_bot = subparsers.add_parser("bot", help="Verwaltet den Telegram Bot (status, poll, test)")
     p_bot.add_argument("bot_action", choices=["status", "poll", "test"], nargs="?", default="status", help="Aktion (Default: status)")
 
+    # 10. cleanup
+    subparsers.add_parser("cleanup", help="Bereinigt Leads-Datenbank durch Abgleich mit sent_log.json (Feature F06)")
+
     return parser
 
 
@@ -542,6 +562,7 @@ def main() -> int:
         "blacklist": cmd_blacklist,
         "scan": cmd_scan,
         "bot": cmd_bot,
+        "cleanup": cmd_cleanup,
     }
 
     handler = command_map.get(args.command)
