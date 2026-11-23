@@ -11,6 +11,7 @@ dist/
 
 .env
 .market/leads/sent_log.json
+.market/apify_ping*
 .crm/
 __pycache__/
 *.pyc

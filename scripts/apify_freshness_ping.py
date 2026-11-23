@@ -110,13 +110,28 @@ def run_ping() -> bool:
     error_detail = None
     success = False
 
+    sub_env = os.environ.copy()
+    if not sub_env.get("APIFY_TOKEN"):
+        env_file = BASE_DIR / ".env"
+        if env_file.exists():
+            try:
+                with open(env_file, "r", encoding="utf-8") as f:
+                    for line in f:
+                        line = line.strip()
+                        if line.startswith("APIFY_TOKEN="):
+                            sub_env["APIFY_TOKEN"] = line.split("=", 1)[1].strip().strip("'\"")
+                            break
+            except Exception:
+                pass
+
     try:
         proc = subprocess.run(
             cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
-            timeout=120
+            timeout=120,
+            env=sub_env
         )
         duration = round(time.monotonic() - start_time, 2)
         stdout_raw = proc.stdout.strip()
