@@ -8,3 +8,4 @@ export * from './identifier.js';
 export * from './csv.js';
 export * from './webhook.js';
 export * from './matcher.js';
+export * from './amazon-parser.js';
