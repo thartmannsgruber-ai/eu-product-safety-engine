@@ -184,6 +184,9 @@ class ReviewQueue:
         self.save()
         return draft_dict
 
+    # Alias fuer Abwaertskompatibilitaet
+    save_draft = add_draft
+
     def get_draft(self, draft_id: str) -> Optional[Dict[str, Any]]:
         """Gibt einen Entwurf anhand seiner ID zurueck oder None."""
         return self._entries.get(draft_id)

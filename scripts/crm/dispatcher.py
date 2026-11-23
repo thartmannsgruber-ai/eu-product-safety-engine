@@ -56,6 +56,11 @@ class UnapprovedDraftError(ValueError):
     pass
 
 
+class ColdOutreachJurisdictionError(ValueError):
+    """Geworfen wenn unaufgeforderte Kaltakquise-Mails an Laender mit Opt-In-Pflicht (AT, PL) versendet werden."""
+    pass
+
+
 def load_env() -> Dict[str, str]:
     """Laedt Umgebungsvariablen aus Projekt- und THFC-.env Dateien."""
     env: Dict[str, str] = {}
@@ -151,10 +156,12 @@ class EmailDispatcher:
         smtp_user: Optional[str] = None,
         smtp_pass: Optional[str] = None,
         sender_name: Optional[str] = None,
+        jurisdiction_gate: Optional[Any] = None,
     ) -> None:
         self.queue = queue or get_default_queue()
         self.blacklist_mgr = blacklist_mgr or getattr(self.queue, "blacklist_mgr", get_default_manager())
         self.storage = storage or get_default_storage()
+        self.jurisdiction_gate = jurisdiction_gate
         self.provider = (provider or "resend").lower()
         self.dry_run = dry_run
 
@@ -203,6 +210,17 @@ class EmailDispatcher:
             or os.environ.get("SENDER_NAME")
             or env.get("SENDER_NAME", "Thomas | THFC Consulting")
         )
+
+    def get_jurisdiction_gate(self) -> Any:
+        """Liefert das zugeordnete Jurisdiktions-Gate (oder instanziiert eines mit passendem Storage)."""
+        if self.jurisdiction_gate is not None:
+            return self.jurisdiction_gate
+        try:
+            from scripts.crm.followup_engine import ColdOutreachJurisdictionGate
+            self.jurisdiction_gate = ColdOutreachJurisdictionGate(storage=self.storage)
+            return self.jurisdiction_gate
+        except Exception:
+            return None
 
     def build_threading_headers(self, draft: Dict[str, Any]) -> Dict[str, str]:
         """
@@ -365,6 +383,44 @@ class EmailDispatcher:
                 f"is on the permanent opt-out blacklist! Dispatch aborted immediately."
             )
 
+        # -------------------------------------------------------------------
+        # Hard-Gate 3: Jurisdiction Gate (Kaltakquise-Schutz fuer AT und PL)
+        # -------------------------------------------------------------------
+        lead = self.storage.get_lead(recipient) if self.storage else None
+        country = (lead.get("country") if lead else "") or draft.get("country") or ""
+        norm_country = str(country).strip().lower()
+        is_restricted = False
+        restricted_code = ""
+        restricted_basis = ""
+
+        if norm_country in ("austria", "österreich", "oesterreich", "at", "aut") or recipient.endswith(".at"):
+            is_restricted = True
+            restricted_code = "AT"
+            restricted_basis = "Österreich (§ 107 TKG): Verbot der unaufgeforderten E-Mail-Kaltakquise ohne vorherige Einwilligung."
+        elif norm_country in ("poland", "polska", "pl", "pol") or recipient.endswith(".pl"):
+            is_restricted = True
+            restricted_code = "PL"
+            restricted_basis = "Polen (Art. 172 Prawo telekomunikacyjne): Verbot unaufgeforderter elektronischer Kommunikation zu Direktmarketing-Zwecken."
+
+        if is_restricted:
+            gate = self.get_jurisdiction_gate()
+            if gate:
+                gate.route_lead_to_linkedin(
+                    lead or {"email": recipient, "company": draft.get("company", ""), "country": country},
+                    restricted_code,
+                    restricted_basis,
+                )
+            elif self.storage:
+                self.storage.update_lead_status(
+                    email=recipient,
+                    status=LeadStatus.CHANNEL_RESTRICTED,
+                    reason=f"Restricted by jurisdiction gate: {restricted_basis}",
+                )
+            raise ColdOutreachJurisdictionError(
+                f"COLD OUTREACH BLOCKED: Recipient '{recipient}' is in restricted jurisdiction {restricted_code} "
+                f"({restricted_basis}). Re-routed to manual LinkedIn outreach task."
+            )
+
         # Threading-Header erstellen
         threading_headers = self.build_threading_headers(draft)
         subject = draft.get("subject", "Product Safety Engine Report")
@@ -372,6 +428,23 @@ class EmailDispatcher:
 
         # Dry-Run Modus
         if is_dry_run:
+            if self.storage and self.storage.get_lead(recipient):
+                try:
+                    intent = str(draft.get("intent", "")).upper()
+                    lead_entry = self.storage.get_lead(recipient)
+                    current_lead_status = lead_entry.get("status") if lead_entry else None
+                    if intent in ("FOLLOW_UP", "FOLLOWUP") or current_lead_status == LeadStatus.OUTREACH_SENT:
+                        new_status = LeadStatus.FOLLOWUP_SENT
+                    else:
+                        new_status = LeadStatus.OUTREACH_SENT
+                    self.storage.update_lead_status(
+                        email=recipient,
+                        status=new_status,
+                        reason=f"Simulated dispatch of draft {draft_id} (DRY_RUN)",
+                    )
+                except Exception:
+                    pass
+
             return DispatchResult(
                 draft_id=draft_id,
                 recipient=recipient,
@@ -414,10 +487,19 @@ class EmailDispatcher:
             # CRMStorage aktualisieren, falls Lead vorhanden
             if self.storage and self.storage.get_lead(recipient):
                 try:
+                    intent = str(draft.get("intent", "")).upper()
+                    lead_entry = self.storage.get_lead(recipient)
+                    current_lead_status = lead_entry.get("status") if lead_entry else None
+
+                    if intent in ("FOLLOW_UP", "FOLLOWUP") or current_lead_status == LeadStatus.OUTREACH_SENT:
+                        new_status = LeadStatus.FOLLOWUP_SENT
+                    else:
+                        new_status = LeadStatus.OUTREACH_SENT
+
                     self.storage.update_lead_status(
                         email=recipient,
-                        status=LeadStatus.OUTREACH_SENT,
-                        note=f"Dispatched draft {draft_id} via {self.provider}",
+                        status=new_status,
+                        reason=f"Dispatched draft {draft_id} via {self.provider}",
                     )
                 except Exception:
                     pass

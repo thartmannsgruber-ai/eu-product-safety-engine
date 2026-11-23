@@ -40,6 +40,7 @@ class LeadStatus:
     REPLIED_POSITIVE = "REPLIED_POSITIVE"
     REPLIED_INQUIRY = "REPLIED_INQUIRY"
     LOST_BLACKLISTED = "LOST_BLACKLISTED"
+    CHANNEL_RESTRICTED = "CHANNEL_RESTRICTED"
 
 
 VALID_LEAD_STATUSES = {
@@ -49,6 +50,7 @@ VALID_LEAD_STATUSES = {
     LeadStatus.REPLIED_POSITIVE,
     LeadStatus.REPLIED_INQUIRY,
     LeadStatus.LOST_BLACKLISTED,
+    LeadStatus.CHANNEL_RESTRICTED,
 }
 
 
@@ -249,7 +251,7 @@ class CRMStorage:
             return False
 
         lead = self.get_lead(norm_email)
-        if lead and lead.get("status") == LeadStatus.LOST_BLACKLISTED:
+        if lead and lead.get("status") in (LeadStatus.LOST_BLACKLISTED, LeadStatus.CHANNEL_RESTRICTED):
             return False
 
         return True

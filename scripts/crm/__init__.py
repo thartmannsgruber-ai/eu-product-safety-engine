@@ -66,6 +66,7 @@ from scripts.crm.drafter import (
     normalize_language_code,
 )
 from scripts.crm.dispatcher import (
+    ColdOutreachJurisdictionError,
     DispatchResult,
     EmailDispatcher,
     UnapprovedDraftError,
@@ -73,6 +74,15 @@ from scripts.crm.dispatcher import (
     dispatch_draft,
     get_default_dispatcher,
     set_default_dispatcher,
+)
+from scripts.crm.followup_engine import (
+    ColdOutreachJurisdictionGate,
+    FollowUpEngine,
+    LinkedInTask,
+    LinkedInTaskManager,
+    get_default_followup_engine,
+    get_default_jurisdiction_gate,
+    get_default_linkedin_mgr,
 )
 from scripts.crm.storage import (
     CRMStorage,
@@ -156,8 +166,17 @@ __all__ = [
     "EmailDispatcher",
     "DispatchResult",
     "UnapprovedDraftError",
+    "ColdOutreachJurisdictionError",
     "dispatch_draft",
     "dispatch_approved_drafts",
     "get_default_dispatcher",
     "set_default_dispatcher",
+    # Follow-Up & Jurisdiction Gate
+    "FollowUpEngine",
+    "ColdOutreachJurisdictionGate",
+    "LinkedInTask",
+    "LinkedInTaskManager",
+    "get_default_followup_engine",
+    "get_default_jurisdiction_gate",
+    "get_default_linkedin_mgr",
 ]

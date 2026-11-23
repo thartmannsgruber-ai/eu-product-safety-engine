@@ -81,6 +81,7 @@ def cmd_status(args: argparse.Namespace) -> int:
     print(f"    - NOT_SENT:              {lead_counts.get(LeadStatus.NOT_SENT, 0)}")
     print(f"    - OUTREACH_SENT:         {lead_counts.get(LeadStatus.OUTREACH_SENT, 0)}")
     print(f"    - FOLLOWUP_SENT:         {lead_counts.get(LeadStatus.FOLLOWUP_SENT, 0)}")
+    print(f"    - CHANNEL_RESTRICTED:    {lead_counts.get(LeadStatus.CHANNEL_RESTRICTED, 0)} (Kaltakquise-Rechts-Gate AT/PL)")
     print(f"    - REPLIED_POSITIVE:      {lead_counts.get(LeadStatus.REPLIED_POSITIVE, 0)}")
     print(f"    - REPLIED_INQUIRY:       {lead_counts.get(LeadStatus.REPLIED_INQUIRY, 0)}")
     print(f"    - LOST_BLACKLISTED:      {lead_counts.get(LeadStatus.LOST_BLACKLISTED, 0)}")
@@ -95,6 +96,13 @@ def cmd_status(args: argparse.Namespace) -> int:
 
     print("\n[3] PERMANENTE OPT-OUT BLACKLIST (blacklist.json):")
     print(f"    Gesperrte Adressen:      {len(blacklist_entries)} (Ausnahmsloser Kontaktschutz)")
+
+    from scripts.crm.followup_engine import get_default_linkedin_mgr
+    li_mgr = get_default_linkedin_mgr()
+    li_tasks = li_mgr.list_tasks()
+    li_pending = len([t for t in li_tasks if t.get("status") == "PENDING"])
+    print("\n[4] LINKEDIN SOCIAL-SELLING TASKS (linkedin_tasks.json):")
+    print(f"    Offene Aufgaben:         {li_pending} (von {len(li_tasks)} gesamt)")
     print("=" * 65 + "\n")
     return 0
 
@@ -473,6 +481,106 @@ def cmd_bot(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_followup(args: argparse.Namespace) -> int:
+    """Steuert den Follow-Up Zyklus fuer Leads im Status OUTREACH_SENT nach Grace Period."""
+    from scripts.crm.followup_engine import get_default_followup_engine
+
+    engine = get_default_followup_engine()
+    action = getattr(args, "followup_action", "list")
+
+    if action == "list":
+        days = getattr(args, "days", 4.0)
+        force = getattr(args, "force", False)
+        eligible = engine.find_eligible_leads(grace_period_days=days, force=force)
+        print("\n" + "=" * 75)
+        print(f"   CRM FOLLOW-UP ENGINE: BERECHTIGTE LEADS (Grace Period: {days} Tage)")
+        print("=" * 75)
+        if not eligible:
+            print(" Keine Leads erfuellen derzeit die Kriterien fuer einen Follow-Up.")
+        else:
+            for l in eligible:
+                print(f" - {l.get('email'):<30} | {l.get('country', ''):<12} | {l.get('company', '')[:25]}")
+        print(f"\n Gesamt: {len(eligible)} berechtigte Leads.\n")
+        return 0
+
+    elif action == "generate":
+        days = getattr(args, "days", 4.0)
+        auto_approve = getattr(args, "auto_approve", False)
+        force = getattr(args, "force", False)
+        drafts = engine.generate_followup_drafts(
+            grace_period_days=days,
+            auto_approve=auto_approve,
+            force=force,
+        )
+        print(f"\n[SUCCESS] {len(drafts)} Follow-Up Entwuerfe generiert und in Review-Queue eingereiht.")
+        for d in drafts:
+            print(f" - [{d.get('draft_id')}] an {d.get('lead_email')} ({d.get('language')}) Status: {d.get('status')}")
+        print("")
+        return 0
+
+    elif action == "dispatch":
+        dry_run = getattr(args, "dry_run", False)
+        limit = getattr(args, "limit", None)
+        results = engine.dispatch_all_approved_followups(limit=limit, dry_run=dry_run)
+        print(f"\n[DISPATCH] {len(results)} Follow-Up Entwuerfe abgearbeitet.")
+        for r in results:
+            print(f" - {r.draft_id} -> {r.recipient}: {r.status} (Provider: {r.provider})")
+        print("")
+        return 0
+
+    return 0
+
+
+def cmd_jurisdiction(args: argparse.Namespace) -> int:
+    """Verwaltet das Kaltakquise-Rechts-Gate fuer AT (§ 107 TKG) und PL (Art. 172 Fernmeldegesetz)."""
+    from scripts.crm.followup_engine import (
+        get_default_jurisdiction_gate,
+        get_default_linkedin_mgr,
+    )
+
+    gate = get_default_jurisdiction_gate()
+    li_mgr = get_default_linkedin_mgr()
+    action = getattr(args, "jurisdiction_action", "status")
+
+    if action == "enforce":
+        tasks = gate.enforce_jurisdiction_on_all_leads()
+        print(f"\n[JURISDICTION GATE] {len(tasks)} Leads aus AT/PL identifiziert und umgeleitet:")
+        for t in tasks:
+            print(f" - {t.email} ({t.country}) -> Task {t.task_id} [{t.legal_basis[:40]}...]")
+        print("")
+        return 0
+
+    elif action == "tasks":
+        tasks = li_mgr.list_tasks()
+        print("\n" + "=" * 85)
+        print("        MANUELLE LINKEDIN / SOCIAL-SELLING OUTREACH AUFGABEN")
+        print("=" * 85)
+        if not tasks:
+            print(" Keine LinkedIn-Tasks vorhanden.")
+        else:
+            for t in tasks:
+                st = t.get("status", "PENDING")
+                print(f" [{st:<9}] {t.get('task_id'):<18} | {t.get('company'):<25} | {t.get('country')}")
+                print(f"              URL: {t.get('linkedin_search_url')}")
+        print("=" * 85 + "\n")
+        return 0
+
+    elif action == "complete":
+        task_id = getattr(args, "task_id", None)
+        if not task_id:
+            print("[ERROR] Bitte task_id angeben.")
+            return 1
+        res = li_mgr.complete_task(task_id, note="Erledigt via CLI")
+        if res:
+            print(f"[SUCCESS] Task {task_id} als COMPLETED markiert.")
+            return 0
+        else:
+            print(f"[ERROR] Task {task_id} nicht gefunden.")
+            return 1
+
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Erstellt den ArgumentParser mit allen CLI-Befehlen."""
     parser = argparse.ArgumentParser(
@@ -541,6 +649,32 @@ def build_parser() -> argparse.ArgumentParser:
     # 10. cleanup
     subparsers.add_parser("cleanup", help="Bereinigt Leads-Datenbank durch Abgleich mit sent_log.json (Feature F06)")
 
+    # 11. followup
+    p_fu = subparsers.add_parser("followup", help="Verwaltet den Follow-Up Zyklus fuer Leads im Status OUTREACH_SENT")
+    p_fu_sub = p_fu.add_subparsers(dest="followup_action", help="Follow-Up Aktionen")
+    
+    p_fu_list = p_fu_sub.add_parser("list", help="Listet berechtigte Leads fuer Follow-Up auf")
+    p_fu_list.add_argument("--days", type=float, default=4.0, help="Grace Period in Tagen (Default: 4)")
+    p_fu_list.add_argument("--force", action="store_true", default=False, help="Erzwingt Einbezug unabhaengig vom Datum")
+
+    p_fu_gen = p_fu_sub.add_parser("generate", help="Erstellt Follow-Up Entwuerfe in der Review Queue")
+    p_fu_gen.add_argument("--days", type=float, default=4.0, help="Grace Period in Tagen (Default: 4)")
+    p_fu_gen.add_argument("--auto-approve", action="store_true", default=False, help="Direkt als APPROVED markieren")
+    p_fu_gen.add_argument("--force", action="store_true", default=False, help="Erzwingt Generierung unabhaengig vom Datum")
+
+    p_fu_disp = p_fu_sub.add_parser("dispatch", help="Versendet freigegebene Follow-Up Entwuerfe")
+    p_fu_disp.add_argument("--limit", type=int, default=None, help="Maximale Anzahl")
+    p_fu_disp.add_argument("--dry-run", action="store_true", default=False, help="Simulierter Versand")
+
+    # 12. jurisdiction
+    p_jur = subparsers.add_parser("jurisdiction", help="Kaltakquise-Rechts-Gate fuer AT und PL")
+    p_jur_sub = p_jur.add_subparsers(dest="jurisdiction_action", help="Jurisdiction Aktionen")
+    
+    p_jur_sub.add_parser("enforce", help="Leitet alle ungesendeten Leads aus AT/PL auf LinkedIn um")
+    p_jur_sub.add_parser("tasks", help="Zeigt LinkedIn Outreach Tasks an")
+    p_jur_comp = p_jur_sub.add_parser("complete", help="Markiert einen LinkedIn-Task als erledigt")
+    p_jur_comp.add_argument("task_id", type=str, help="ID des Tasks")
+
     return parser
 
 
@@ -563,6 +697,8 @@ def main() -> int:
         "scan": cmd_scan,
         "bot": cmd_bot,
         "cleanup": cmd_cleanup,
+        "followup": cmd_followup,
+        "jurisdiction": cmd_jurisdiction,
     }
 
     handler = command_map.get(args.command)
