@@ -279,6 +279,55 @@ class TestCRMFreeCheckFlow(unittest.TestCase):
         lead = self.storage.get_lead(lead_email)
         self.assertEqual(lead["status"], LeadStatus.REPLIED_POSITIVE)
 
+    # --- 6. Security & Resource Guard Tests (P1, P3, P5) ---
+
+    def test_html_escaping_in_free_check_output(self):
+        """P1: Verhindert HTML/Script-Injektionen durch unsichere Eingabewerte."""
+        malicious_sku = "<script>alert('xss')</script>"
+        items = [{"sku": malicious_sku, "ean": "4006381333931"}]
+        res = execute_free_check(
+            sender_email="test@shop.de",
+            items=items,
+            company="<img src=x onerror=alert(1)>",
+            engine=self.engine,
+        )
+        self.assertNotIn("<script>", res.email_body_html)
+        self.assertIn("&lt;script&gt;alert(&#x27;xss&#x27;)&lt;/script&gt;", res.email_body_html)
+
+    def test_zero_hits_disclaimer(self):
+        """P5: 0-Treffer Hinweis wird bei 0 Barcode-Hits korrekt eingebunden."""
+        self.engine.lookup_barcode.side_effect = None
+        self.engine.lookup_barcode.return_value = []
+        items = [{"sku": "SKU-OK", "ean": "4099979071513"}]
+        res = execute_free_check(
+            sender_email="test@shop.de",
+            items=items,
+            engine=self.engine,
+        )
+        self.assertEqual(res.barcode_hits, 0)
+        self.assertIn("Hinweis zu 0 Treffern", res.email_body_html)
+        self.assertIn("0 Treffer im EU Safety Gate bedeuten nicht automatisch", res.report_markdown)
+
+    def test_attachment_max_size_rejection(self):
+        """P3: Uebergrosse Dateien (> 10 MB) werden verworfen."""
+        huge_bytes = b"x" * (11 * 1024 * 1024)
+        parsed = parse_attachment_items("huge.xlsx", huge_bytes)
+        self.assertEqual(parsed, [])
+
+    def test_zip_bomb_rejection(self):
+        """P3: Zip-Bombs mit unkomprimierter Groesse > 25 MB werden abgewiesen."""
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+            # Erzeuge virtuelle Datei mit unkomprimiert 30 MB
+            info = zipfile.ZipInfo("xl/worksheets/sheet1.xml")
+            info.file_size = 30 * 1024 * 1024
+            info.compress_type = zipfile.ZIP_DEFLATED
+            z.writestr(info, b"0" * 1000)
+
+        bomb_bytes = buf.getvalue()
+        parsed = parse_xlsx_sheets(bomb_bytes)
+        self.assertEqual(parsed, [])
+
 
 if __name__ == "__main__":
     unittest.main()

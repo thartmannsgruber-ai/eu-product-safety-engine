@@ -703,6 +703,17 @@ class InboundMailCrawler:
 
         if kind == "HARD":
             for rcpt in recipients:
+                # DSN-Spoofing-Schutz: Nur Leads bouncen, die wir tatsaechlich kontaktiert haben!
+                lead = self.storage.get_lead(rcpt)
+                current_status = lead.get("status") if lead else None
+                if current_status not in (LeadStatus.OUTREACH_SENT, LeadStatus.FOLLOWUP_SENT):
+                    logger.warning(
+                        "Bounce fuer nicht kontaktierten Lead %s (Status: %s) ignoriert (DSN-Spoofing-Schutz).",
+                        rcpt,
+                        current_status,
+                    )
+                    continue
+
                 try:
                     self.storage.mark_bounced(
                         rcpt,

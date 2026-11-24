@@ -331,6 +331,58 @@ class TestCRMBounceHandling(unittest.TestCase):
         output = buf.getvalue()
         self.assertIn("- BOUNCED:", output)
 
+    # --- 6. Security & Legal Audit Tests (P2 & P4) ---
+
+    def test_opt_out_preservation_on_subsequent_bounce(self):
+        """P2 (S2-2): Gesetzlicher Opt-Out Nachweis wird nicht durch Bounce ueberschrieben."""
+        email = "optout-lead@seller.de"
+        # 1. Lead erklaert Opt-Out
+        self.blacklist_mgr.add_to_blacklist(
+            email,
+            reason="Widerspruch gem. Art. 21 DSGVO / Kein Interesse",
+            snippet="Bitte loeschen Sie unsere Daten",
+        )
+        entry1 = self.blacklist_mgr.get_blacklist()[email]
+        self.assertIn("Art. 21 DSGVO", entry1["reason"])
+
+        # 2. Spaeter trifft ein technischer Hard-Bounce fuer dieselbe Adresse ein
+        self.blacklist_mgr.add_to_blacklist(
+            email,
+            reason="bounce",
+            snippet="550 5.1.1 User unknown",
+        )
+        entry2 = self.blacklist_mgr.get_blacklist()[email]
+        # Grund MUSS weiterhin der urspruengliche Opt-Out sein
+        self.assertIn("Art. 21 DSGVO", entry2["reason"])
+        self.assertIn("[Nachtraeglicher Hard-Bounce erfasst: 550 5.1.1 User unknown]", entry2["snippet"])
+
+    def test_crawler_dsn_spoofing_defense_ignores_uncontacted_lead(self):
+        """P4 (S2-4): DSN fuer unkontaktierten Lead (NOT_SENT) fuehrt zu keinem Statuswechsel."""
+        uncontacted_email = "never-sent@target-store.de"
+        # Lead existiert, ist aber im Status NOT_SENT
+        self.storage.update_lead_status(uncontacted_email, LeadStatus.NOT_SENT)
+        self.assertEqual(self.storage.get_lead(uncontacted_email)["status"], LeadStatus.NOT_SENT)
+
+        raw_msg = {
+            "from": "mailer-daemon@spoofed-relay.com",
+            "subject": "Delivery Status Notification (Failure)",
+            "body": f"550 5.1.1 User unknown {uncontacted_email}",
+            "content_type": "multipart/report",
+            "dsn_text": f"Status: 5.1.1\r\nFinal-Recipient: rfc822; {uncontacted_email}\r\n",
+            "x_failed_recipients": "",
+            "message_id": "<spoofed-dsn-1@spoofed-relay.com>",
+        }
+
+        action = self.crawler.process_message(raw_msg)
+        self.assertEqual(action.get("status"), "BOUNCE_HARD")
+        # marked_bounced darf den unkontaktierten Lead NICHT enthalten
+        self.assertNotIn(uncontacted_email, action.get("marked_bounced", []))
+
+        # Status MUSS unveraendert NOT_SENT bleiben
+        lead = self.storage.get_lead(uncontacted_email)
+        self.assertEqual(lead["status"], LeadStatus.NOT_SENT)
+        self.assertFalse(self.blacklist_mgr.is_blacklisted(uncontacted_email))
+
 
 if __name__ == "__main__":
     unittest.main()

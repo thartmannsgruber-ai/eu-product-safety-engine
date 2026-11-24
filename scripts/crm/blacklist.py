@@ -148,11 +148,27 @@ class BlacklistManager:
         if not norm_email:
             raise ValueError("Email address cannot be empty.")
 
+        existing = self._entries.get(norm_email)
+        final_reason = reason
+        final_snippet = snippet
+        blacklisted_at = datetime.now(timezone.utc).isoformat()
+
+        # Rechtssicherheit (DSGVO Art. 21 / UWG § 7): Ein dokumentierter Opt-Out Nachweis
+        # darf niemals durch einen spaeteren technischen Bounce ueberschrieben werden!
+        if existing:
+            old_reason = str(existing.get("reason") or "").lower()
+            old_snippet = str(existing.get("snippet") or "")
+            is_legal_optout = any(k in old_reason for k in ("opt-out", "absage", "widerspruch", "lost_blacklisted"))
+            if is_legal_optout and reason == "bounce":
+                final_reason = existing.get("reason") or reason
+                final_snippet = f"{old_snippet} [Nachtraeglicher Hard-Bounce erfasst: {snippet}]".strip()
+                blacklisted_at = existing.get("blacklisted_at") or blacklisted_at
+
         entry = {
             "email": norm_email,
-            "reason": reason,
-            "snippet": snippet,
-            "blacklisted_at": datetime.now(timezone.utc).isoformat()
+            "reason": final_reason,
+            "snippet": final_snippet,
+            "blacklisted_at": blacklisted_at,
         }
         self._entries[norm_email] = entry
         self.save()

@@ -16,6 +16,7 @@ Workflow:
 from __future__ import annotations
 
 import csv
+import html
 import io
 import json
 import logging
@@ -49,6 +50,11 @@ logger = logging.getLogger("CRM.FreeCheckFlow")
 # Maximum SKUs gratis
 MAX_FREE_CHECK_SKUS = 10
 
+# Sicherheits- und Ressourcenschranken (Zip-Bomb- und Memory-Exhaustion-Schutz)
+MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024  # 10 MB Dateigroesse
+MAX_UNCOMPRESSED_ZIP_BYTES = 25 * 1024 * 1024  # 25 MB unkomprimiert
+MAX_PARSED_ROWS = 200  # Ausreichend fuer 10-SKU Screening plus Puffer
+
 # Regex fuer Excel Exponentialnotation (z. B. 4.00638E+12)
 _SCI_NOTATION_RE = re.compile(r"^\s*([+-]?\d+(?:\.\d+)?)[eE]([+-]?\d+)\s*$")
 
@@ -76,10 +82,23 @@ def parse_xlsx_sheets(data_bytes: bytes) -> List[List[str]]:
     """
     Parst das erste Arbeitsblatt einer XLSX-Datei ausschliesslich mit
     den Python-Standardmodulen zipfile und xml.etree.ElementTree.
+    Enthaelt Ressourcenschranken gegen Zip-Bombs und Memory-Exhaustion.
     """
+    if not data_bytes or len(data_bytes) > MAX_ATTACHMENT_BYTES:
+        logger.warning(f"[FreeCheck] XLSX-Datei leer oder Groesse {len(data_bytes) if data_bytes else 0} > {MAX_ATTACHMENT_BYTES} Bytes.")
+        return []
+
     rows: List[List[str]] = []
     try:
         with zipfile.ZipFile(io.BytesIO(data_bytes)) as z:
+            # Schutz vor Zip-Bombs: Unkomprimierte Gesamtgroesse vor Extraktion validieren
+            total_uncompressed = sum(info.file_size for info in z.infolist())
+            if total_uncompressed > MAX_UNCOMPRESSED_ZIP_BYTES:
+                logger.warning(
+                    f"[FreeCheck] Zip-Bomb Verdacht: Unkomprimierte Groesse {total_uncompressed} Bytes > {MAX_UNCOMPRESSED_ZIP_BYTES} Bytes."
+                )
+                return []
+
             # 1. Shared Strings einlesen
             shared_strings: List[str] = []
             if "xl/sharedStrings.xml" in z.namelist():
@@ -100,6 +119,8 @@ def parse_xlsx_sheets(data_bytes: bytes) -> List[List[str]]:
             row_nodes = ws_tree.findall(".//main:row", ns) or ws_tree.findall(".//row")
 
             for r_node in row_nodes:
+                if len(rows) >= MAX_PARSED_ROWS:
+                    break
                 c_nodes = r_node.findall(".//main:c", ns) or r_node.findall(".//c")
                 row_vals: List[str] = []
                 for c in c_nodes:
@@ -133,6 +154,12 @@ def parse_attachment_items(filename: str, content: Union[bytes, str]) -> List[Di
     filename_lower = filename.lower()
     raw_rows: List[List[str]] = []
 
+    # Schutz vor uebergrossen Anhaengen
+    content_len = len(content) if isinstance(content, (bytes, str)) else 0
+    if content_len > MAX_ATTACHMENT_BYTES:
+        logger.warning(f"[FreeCheck] Anhang {filename} ueberschreitet Maximalgroesse von {MAX_ATTACHMENT_BYTES} Bytes.")
+        return []
+
     if filename_lower.endswith(".xlsx"):
         content_bytes = content if isinstance(content, bytes) else content.encode("utf-8", errors="replace")
         raw_rows = parse_xlsx_sheets(content_bytes)
@@ -144,6 +171,8 @@ def parse_attachment_items(filename: str, content: Union[bytes, str]) -> List[Di
         for r in reader:
             if any(cell.strip() for cell in r):
                 raw_rows.append([cell.strip() for cell in r])
+                if len(raw_rows) >= MAX_PARSED_ROWS:
+                    break
 
     if not raw_rows:
         return []
@@ -321,6 +350,13 @@ def execute_free_check(
         md_lines.append(f"| {row['sku']} | {row['ean']} | {symbol} | {row['reason']} |")
 
     md_lines.append("\n---\n")
+    if barcode_hits == 0:
+        md_lines.append(
+            "> [!NOTE]\n"
+            "> *Wichtiger Hinweis: 0 Treffer im EU Safety Gate bedeuten nicht automatisch, "
+            "dass alle Produkte mangelfrei sind. Viele behoerdliche Rueckrufmeldungen enthalten "
+            "keine registrierte Barcode/EAN-Nummer.*\n"
+        )
     if truncated:
         md_lines.append(
             f"> [!IMPORTANT]\n"
@@ -337,12 +373,21 @@ def execute_free_check(
 
     # HTML Body fuer Antwort-Mail
     table_rows_html = "".join([
-        f"<tr><td style='padding:8px; border:1px solid #ddd;'>{r['sku']}</td>"
-        f"<td style='padding:8px; border:1px solid #ddd;'>{r['ean']}</td>"
-        f"<td style='padding:8px; border:1px solid #ddd; font-weight:bold; color:{'#d32f2f' if 'ROT' in r['status'] else ('#f57c00' if 'GELB' in r['status'] else '#388e3c')}'>{r['status']}</td>"
-        f"<td style='padding:8px; border:1px solid #ddd;'>{r['reason']}</td></tr>"
+        f"<tr><td style='padding:8px; border:1px solid #ddd;'>{html.escape(str(r['sku']))}</td>"
+        f"<td style='padding:8px; border:1px solid #ddd;'>{html.escape(str(r['ean']))}</td>"
+        f"<td style='padding:8px; border:1px solid #ddd; font-weight:bold; color:{'#d32f2f' if 'ROT' in r['status'] else ('#f57c00' if 'GELB' in r['status'] else '#388e3c')}'>{html.escape(str(r['status']))}</td>"
+        f"<td style='padding:8px; border:1px solid #ddd;'>{html.escape(str(r['reason']))}</td></tr>"
         for r in audit_rows
     ])
+
+    zero_hits_html = ""
+    if barcode_hits == 0:
+        zero_hits_html = """
+        <p style="background-color: #f1f8e9; border-left: 4px solid #81c784; padding: 10px; margin: 16px 0; font-size: 13px; color: #2e7d32;">
+            <strong>Hinweis zu 0 Treffern:</strong> Dies bedeutet nicht automatisch, dass alle Produkte mangelfrei sind, 
+            da manche behoerdlichen Meldungen keine EAN hinterlegt haben.
+        </p>
+        """
 
     upsell_html = ""
     if truncated:
@@ -378,6 +423,8 @@ def execute_free_check(
                 {table_rows_html}
             </tbody>
         </table>
+
+        {zero_hits_html}
 
         {upsell_html}
 
