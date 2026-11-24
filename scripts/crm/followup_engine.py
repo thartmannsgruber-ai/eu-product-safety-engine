@@ -188,14 +188,26 @@ class ColdOutreachJurisdictionGate:
         "AT": {
             "country_names": {"austria", "österreich", "oesterreich", "at", "aut"},
             "tld": ".at",
-            "legal_basis": "Österreich (§ 107 TKG): Verbot der unaufgeforderten E-Mail-Kaltakquise ohne vorherige Einwilligung.",
+            "legal_basis": "Österreich (§ 174 TKG 2021 / ehem. § 107 TKG): Verbot der unaufgeforderten E-Mail-Kaltakquise ohne vorherige Einwilligung.",
             "language": "de",
         },
         "PL": {
             "country_names": {"poland", "polska", "pl", "pol"},
             "tld": ".pl",
-            "legal_basis": "Polen (Art. 172 Prawo telekomunikacyjne): Verbot unaufgeforderter elektronischer Kommunikation zu Direktmarketing-Zwecken.",
+            "legal_basis": "Polen (Art. 398 Prawo komunikacji elektronicznej / ehem. Art. 172 Prawo telekomunikacyjne): Verbot unaufgeforderter elektronischer Kommunikation zu Direktmarketing-Zwecken.",
             "language": "en",
+        },
+        "IT": {
+            "country_names": {"italy", "italien", "italia", "it", "ita"},
+            "tld": ".it",
+            "legal_basis": "Italien (Art. 130 Codice Privacy / D.lgs. 196/2003): Zwingendes vorheriges Opt-In für B2B-Kaltakquise per E-Mail.",
+            "language": "it",
+        },
+        "ES": {
+            "country_names": {"spain", "spanien", "españa", "espana", "es", "esp"},
+            "tld": ".es",
+            "legal_basis": "Spanien (Art. 21 LSSI / Ley 34/2002): Verbot unaufgeforderter kommerzieller E-Mails ohne vorherige ausdrückliche Einwilligung.",
+            "language": "es",
         },
     }
 
@@ -213,21 +225,15 @@ class ColdOutreachJurisdictionGate:
         country: Optional[str] = None,
     ) -> Tuple[bool, Optional[str], Optional[str]]:
         """
-        Prueft ob ein Empfaenger unter ein Kaltakquise-Verbot faellt.
+        Prueft ob ein Empfaenger unter ein Kaltakquise-Verbot faellt (AT, PL, IT, ES).
         Rueckgabe: (is_restricted, country_code, legal_basis)
         """
         norm_email = normalize_email(email)
         norm_country = (country or "").strip().lower()
 
-        # Pruefe auf AT
-        at_info = self.RESTRICTED_JURISDICTIONS["AT"]
-        if norm_country in at_info["country_names"] or norm_email.endswith(at_info["tld"]):
-            return True, "AT", at_info["legal_basis"]
-
-        # Pruefe auf PL
-        pl_info = self.RESTRICTED_JURISDICTIONS["PL"]
-        if norm_country in pl_info["country_names"] or norm_email.endswith(pl_info["tld"]):
-            return True, "PL", pl_info["legal_basis"]
+        for c_code, info in self.RESTRICTED_JURISDICTIONS.items():
+            if norm_country in info["country_names"] or norm_email.endswith(info["tld"]):
+                return True, c_code, info["legal_basis"]
 
         return False, None, None
 

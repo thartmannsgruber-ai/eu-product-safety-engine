@@ -38,6 +38,11 @@ try:
 except ImportError:
     stripe = None  # type: ignore
 
+# Add project root to sys.path so scripts.crm can be imported when run directly
+_ROOT_DIR = Path(__file__).resolve().parent.parent.parent
+if str(_ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(_ROOT_DIR))
+
 from scripts.crm.storage import CRMStorage, normalize_email
 
 
