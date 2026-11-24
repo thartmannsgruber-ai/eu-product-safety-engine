@@ -813,6 +813,9 @@ class SafetyGateEngine:
 
         return hits
 
+    # Alias fuer Abwaertskompatibilitaet mit Free-Check Flow und externen Aufrufern
+    lookup_barcode = check_gtin
+
     def check_item(
         self, item: Union[AuditItem, str, Dict[str, Any]]
     ) -> AuditResult:

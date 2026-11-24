@@ -328,6 +328,20 @@ class TestCRMFreeCheckFlow(unittest.TestCase):
         parsed = parse_xlsx_sheets(bomb_bytes)
         self.assertEqual(parsed, [])
 
+    def test_execute_free_check_with_real_safety_gate_engine(self):
+        """Verifiziert, dass execute_free_check auch ohne Mocks mit der echten SafetyGateEngine laeuft."""
+        real_engine = SafetyGateEngine()
+        items = [{"sku": "REAL-1", "ean": "4006381333931"}]
+        res = execute_free_check(
+            sender_email="real@fba.de",
+            items=items,
+            company="Real Shop GmbH",
+            engine=real_engine,
+        )
+        self.assertEqual(res.screened_items, 1)
+        self.assertTrue(len(res.report_markdown) > 0)
+        self.assertTrue(len(res.report_html) > 0)
+
 
 if __name__ == "__main__":
     unittest.main()

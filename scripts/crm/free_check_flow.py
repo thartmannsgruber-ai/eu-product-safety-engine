@@ -309,7 +309,8 @@ def execute_free_check(
             continue
 
         if ean:
-            hits = engine.lookup_barcode(ean)
+            lookup_fn = getattr(engine, "lookup_barcode", None) or getattr(engine, "check_gtin", None)
+            hits = lookup_fn(ean) if callable(lookup_fn) else []
             if hits:
                 barcode_hits += 1
                 hit = hits[0]
