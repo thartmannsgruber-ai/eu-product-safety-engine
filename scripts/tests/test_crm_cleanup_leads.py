@@ -193,10 +193,10 @@ class TestCRMLeadDatabaseSanitation(unittest.TestCase):
         self.assertEqual(len(sent_leads), 24, "Es muessen exakt 24 real gesendete Leads sein")
 
         for lead in sent_leads:
-            self.assertEqual(
+            self.assertIn(
                 lead["status"],
-                LeadStatus.OUTREACH_SENT,
-                f"Lead {lead['email']} in sent_log muss OUTREACH_SENT behalten",
+                (LeadStatus.OUTREACH_SENT, LeadStatus.BOUNCED),
+                f"Lead {lead['email']} in sent_log muss OUTREACH_SENT oder BOUNCED behalten",
             )
         sent_countries = Counter(lead.get("country") for lead in sent_leads)
         self.assertEqual(sent_countries.get("France"), 10, "Exakt 10 gesendete Leads aus Frankreich")

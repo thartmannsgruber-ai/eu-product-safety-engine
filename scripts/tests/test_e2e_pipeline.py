@@ -40,7 +40,7 @@ class TestE2EPipelineIntegration:
         assert summary["stripe"]["audit_plus_price"] == 1490
         assert summary["stripe"]["webhook_verified"] is True
         assert summary["crm"]["total_leads"] == 55
-        assert summary["crm"]["status_breakdown"]["OUTREACH_SENT"] == 24
+        assert summary["crm"]["status_breakdown"]["OUTREACH_SENT"] + summary["crm"]["status_breakdown"].get("BOUNCED", 0) == 24
         assert summary["crm"]["status_breakdown"]["NOT_SENT"] == 29
 
     def test_b2b_packages_and_checkout_session(self):

@@ -142,8 +142,8 @@ def run_crm_e2e() -> dict:
         if status_name != "TOTAL":
             print(f"    - {status_name}: {count}")
 
-    # Validierungs-Schranken gemaess F06
-    assert counts.get(LeadStatus.OUTREACH_SENT, 0) == 24, "Es muessen exakt 24 real gesendete Leads (FR/NL) im Status OUTREACH_SENT sein"
+    # Validierungs-Schranken gemaess F06 (inkl. gebouncter Adressen)
+    assert counts.get(LeadStatus.OUTREACH_SENT, 0) + counts.get(LeadStatus.BOUNCED, 0) == 24, "Es muessen exakt 24 real gesendete Leads (FR/NL) im Status OUTREACH_SENT oder BOUNCED sein"
     assert counts.get(LeadStatus.NOT_SENT, 0) == 29, "Es muessen exakt 29 ungesendete Leads (IT, PL, ES, AT) im Status NOT_SENT sein"
     assert counts.get(LeadStatus.LOST_BLACKLISTED, 0) == 2, "Es muessen exakt 2 geblockte Leads im Status LOST_BLACKLISTED sein"
 

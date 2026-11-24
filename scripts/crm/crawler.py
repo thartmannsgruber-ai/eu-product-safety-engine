@@ -448,6 +448,7 @@ class InboundMailCrawler:
             content_type = raw_input.get("content_type") or raw_input.get("Content-Type") or ""
             x_failed = raw_input.get("x_failed_recipients") or raw_input.get("X-Failed-Recipients") or ""
             dsn_text = raw_input.get("dsn_text") or ""
+            attachments = raw_input.get("attachments") or []
 
             if not message_id:
                 hash_input = f"{sender_email}_{subj}_{date_str}_{body[:100]}".encode("utf-8")
@@ -475,6 +476,7 @@ class InboundMailCrawler:
                 "content_type": str(content_type).strip(),
                 "x_failed_recipients": str(x_failed).strip(),
                 "dsn_text": str(dsn_text),
+                "attachments": attachments,
             }
 
         # Falls RFC 822 Bytes oder String
@@ -511,6 +513,20 @@ class InboundMailCrawler:
         x_failed = decode_mime_header(msg.get("X-Failed-Recipients", "")).strip()
         dsn_text = _extract_dsn_text(msg)
 
+        attachments = []
+        if hasattr(msg, "walk"):
+            for part in msg.walk():
+                fn = part.get_filename()
+                if fn:
+                    fn_decoded = decode_mime_header(fn)
+                    payload = part.get_payload(decode=True)
+                    if payload:
+                        attachments.append({
+                            "filename": fn_decoded,
+                            "content": payload,
+                            "content_type": str(part.get_content_type() or ""),
+                        })
+
         if not message_id:
             hash_input = f"{sender_email}_{subject}_{date_str}_{body[:100]}".encode("utf-8")
             message_id = f"gen-{hashlib.sha256(hash_input).hexdigest()[:16]}"
@@ -537,6 +553,7 @@ class InboundMailCrawler:
             "content_type": content_type,
             "x_failed_recipients": x_failed,
             "dsn_text": dsn_text,
+            "attachments": attachments,
         }
 
     @staticmethod
@@ -843,6 +860,16 @@ class InboundMailCrawler:
             subject=parsed["subject"]
         )
 
+        # Wenn Anhang mit CSV/TSV/XLSX-Artikeln vorliegt und kein Opt-Out vorliegt:
+        # Einstufung als POSITIVE_TEST_REQUEST fuer den automatisierten Free-Check Flow.
+        if classification.intent != Intent.NEGATIVE_OPTOUT and parsed.get("attachments"):
+            from scripts.crm.free_check_flow import parse_attachment_items
+            for att in parsed["attachments"]:
+                if parse_attachment_items(att.get("filename", ""), att.get("content", b"")):
+                    classification.intent = Intent.POSITIVE_TEST_REQUEST
+                    classification.reason = "Attachment with product catalog / EANs received for free check"
+                    break
+
         now_iso = datetime.now(timezone.utc).isoformat()
         snippet = classification.clean_text[:300].strip()
 
@@ -895,33 +922,62 @@ class InboundMailCrawler:
         draft_id = None
 
         # Falls auto_draft aktiv: Safety Gate Engine & Response Drafter anstossen
-        if self.auto_draft and self.engine and self.drafter and not lead_is_terminal and classification.intent == Intent.POSITIVE_TEST_REQUEST:
+        if self.auto_draft and not lead_is_terminal and classification.intent == Intent.POSITIVE_TEST_REQUEST:
             try:
-                audit_report = self.engine.run_audit(text=parsed["body"])
-                lead_data = active_lead or {"email": target_email}
-                lead_lang = lead_data.get("language") if isinstance(lead_data, dict) else None
-                generated_draft = self.drafter.draft_and_enqueue(
-                    lead=lead_data,
-                    inbound_message=parsed,
-                    report_data=audit_report,
-                    language=lead_lang,
-                    intent=classification.intent,
-                )
-                if isinstance(generated_draft, dict):
-                    draft_id = generated_draft.get("draft_id")
-                elif hasattr(generated_draft, "draft_id"):
-                    draft_id = getattr(generated_draft, "draft_id")
+                # 1. Pruefe zuerst auf CSV/TSV/XLSX-Anhaenge (Automatisierter Free-Check Flow)
+                att_items = []
+                for att in parsed.get("attachments") or []:
+                    from scripts.crm.free_check_flow import parse_attachment_items
+                    found = parse_attachment_items(att.get("filename", ""), att.get("content", b""))
+                    if found:
+                        att_items.extend(found)
 
-                # Telegram-Push fuer neuen Entwurf (Human-in-the-Loop)
-                if generated_draft:
-                    try:
-                        from scripts.crm.telegram_bot import get_default_bot
-                        draft_payload = generated_draft if isinstance(generated_draft, dict) else (getattr(generated_draft, "__dict__", {}) or {})
-                        get_default_bot().notify_new_draft(draft_payload)
-                    except Exception:
-                        pass
-            except Exception:
-                pass
+                if att_items:
+                    from scripts.crm.free_check_flow import execute_free_check, enqueue_free_check_draft
+                    comp = (active_lead or {}).get("company", "")
+                    free_res = execute_free_check(
+                        sender_email=target_email,
+                        items=att_items,
+                        company=comp,
+                        engine=self.engine,
+                    )
+                    generated_draft = enqueue_free_check_draft(
+                        result=free_res,
+                        storage=self.storage,
+                        queue=self.drafter.queue if self.drafter else None,
+                        blacklist_mgr=self.blacklist_mgr,
+                    )
+                    if isinstance(generated_draft, dict):
+                        draft_id = generated_draft.get("draft_id")
+                    elif hasattr(generated_draft, "draft_id"):
+                        draft_id = getattr(generated_draft, "draft_id")
+                elif self.engine and self.drafter:
+                    # 2. Fallback: Freitext-EANs aus Body
+                    audit_report = self.engine.run_audit(text=parsed["body"])
+                    lead_data = active_lead or {"email": target_email}
+                    lead_lang = lead_data.get("language") if isinstance(lead_data, dict) else None
+                    generated_draft = self.drafter.draft_and_enqueue(
+                        lead=lead_data,
+                        inbound_message=parsed,
+                        report_data=audit_report,
+                        language=lead_lang,
+                        intent=classification.intent,
+                    )
+                    if isinstance(generated_draft, dict):
+                        draft_id = generated_draft.get("draft_id")
+                    elif hasattr(generated_draft, "draft_id"):
+                        draft_id = getattr(generated_draft, "draft_id")
+
+                    # Telegram-Push fuer neuen Entwurf (Human-in-the-Loop)
+                    if generated_draft:
+                        try:
+                            from scripts.crm.telegram_bot import get_default_bot
+                            draft_payload = generated_draft if isinstance(generated_draft, dict) else (getattr(generated_draft, "__dict__", {}) or {})
+                            get_default_bot().notify_new_draft(draft_payload)
+                        except Exception:
+                            pass
+            except Exception as draft_err:
+                logger.warning("Fehler beim Erzeugen des Antwortentwurfs fuer %s: %s", target_email, draft_err)
 
         if active_lead:
             inbound_event = {
