@@ -1,0 +1,20 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//ProductSafetyEngine//Antigravity//DE
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+BEGIN:VEVENT
+UID:pse-reminder-20261125-090000@thfc-consulting.de
+DTSTAMP:20261124T150000Z
+DTSTART:20261125T080000Z
+DTEND:20261125T090000Z
+SUMMARY:ProductSafetyEngine: B2B Outreach Priorisierung (kostenlos/ohne LinkedIn)
+DESCRIPTION:Vorbereitung der naechsten Outreach-Schritte fuer ProductSafetyEngine: Eruierung kostenloser B2B-Multiplikatoren, Verbaende und Marktplatz-Kanaele ohne LinkedIn und ohne Werbekosten.
+STATUS:CONFIRMED
+BEGIN:VALARM
+TRIGGER:-PT15M
+ACTION:DISPLAY
+DESCRIPTION:Reminder: ProductSafetyEngine Outreach Priorisierung
+END:VALARM
+END:VEVENT
+END:VCALENDAR
