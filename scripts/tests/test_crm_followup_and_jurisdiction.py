@@ -105,17 +105,17 @@ class TestCRMFollowupAndJurisdiction(unittest.TestCase):
             "updated_at": sent_5_days_ago,
         }
 
-        # Lead 2: NL Lead, gesendet vor 4.2 Tagen -> eligible!
+        # Lead 2: Zweiter FR Lead, gesendet vor 4.2 Tagen -> eligible!
         sent_4_days_ago = (self.ref_now - datetime.timedelta(days=4.2)).isoformat()
-        self.storage._leads["inkoop@nl-speelgoed.nl"] = {
-            "email": "inkoop@nl-speelgoed.nl",
-            "company": "Nederland Speelgoed BV",
-            "country": "Netherlands",
-            "language": "nl",
+        self.storage._leads["contact2@fr-jouets.fr"] = {
+            "email": "contact2@fr-jouets.fr",
+            "company": "Jouets Lyon SAS",
+            "country": "France",
+            "language": "fr",
             "status": LeadStatus.OUTREACH_SENT,
-            "subject": "Safety Gate verificatie voor Nederland Speelgoed BV?",
+            "subject": "Vérification Safety Gate pour Jouets Lyon SAS ?",
             "sent_at": sent_4_days_ago,
-            "resend_id": "resend_nl_456",
+            "resend_id": "resend_fr_456",
             "history": [],
             "created_at": sent_4_days_ago,
             "updated_at": sent_4_days_ago,
@@ -158,7 +158,7 @@ class TestCRMFollowupAndJurisdiction(unittest.TestCase):
             grace_period_days=4.0,
         )
         eligible_emails = {l["email"] for l in eligible}
-        self.assertEqual(eligible_emails, {"contact@fr-toys.fr", "inkoop@nl-speelgoed.nl"})
+        self.assertEqual(eligible_emails, {"contact@fr-toys.fr", "contact2@fr-jouets.fr"})
 
         # Entwuerfe generieren
         drafts = self.engine.generate_followup_drafts(
@@ -168,7 +168,7 @@ class TestCRMFollowupAndJurisdiction(unittest.TestCase):
         )
         self.assertEqual(len(drafts), 2)
 
-        # Pruefe franzoesischen Entwurf
+        # Pruefe ersten franzoesischen Entwurf
         fr_draft = next(d for d in drafts if d["lead_email"] == "contact@fr-toys.fr")
         self.assertEqual(fr_draft["language"], "fr")
         self.assertTrue(fr_draft["subject"].startswith("Re: Vérification Safety Gate"))
@@ -179,15 +179,15 @@ class TestCRMFollowupAndJurisdiction(unittest.TestCase):
         self.assertEqual(fr_draft["status"], DraftStatus.PENDING_REVIEW)
         self.assertEqual(fr_draft["intent"], "FOLLOW_UP")
 
-        # Pruefe niederlaendischen Entwurf
-        nl_draft = next(d for d in drafts if d["lead_email"] == "inkoop@nl-speelgoed.nl")
-        self.assertEqual(nl_draft["language"], "nl")
-        self.assertTrue(nl_draft["subject"].startswith("Re: Safety Gate verificatie"))
-        self.assertEqual(nl_draft["in_reply_to"], "resend_nl_456")
-        self.assertIn("Nederland Speelgoed BV", nl_draft["body"])
-        self.assertIn(APIFY_ACTOR_URL, nl_draft["body"])
-        self.assertIn("$ 5 starttegoed", nl_draft["body"])
-        self.assertEqual(nl_draft["status"], DraftStatus.PENDING_REVIEW)
+        # Pruefe zweiten franzoesischen Entwurf
+        fr2_draft = next(d for d in drafts if d["lead_email"] == "contact2@fr-jouets.fr")
+        self.assertEqual(fr2_draft["language"], "fr")
+        self.assertTrue(fr2_draft["subject"].startswith("Re: Vérification Safety Gate"))
+        self.assertEqual(fr2_draft["in_reply_to"], "resend_fr_456")
+        self.assertIn("Jouets Lyon SAS", fr2_draft["body"])
+        self.assertIn(APIFY_ACTOR_URL, fr2_draft["body"])
+        self.assertIn("5 $ de crédit de bienvenue", fr2_draft["body"])
+        self.assertEqual(fr2_draft["status"], DraftStatus.PENDING_REVIEW)
 
         # Pruefe Speicherung in ReviewQueue
         queued_drafts = self.queue.list_drafts()
@@ -197,15 +197,15 @@ class TestCRMFollowupAndJurisdiction(unittest.TestCase):
         """
         Kriterium 2: Setzt nach erfolgreichem Versand den Status der Leads atomar auf FOLLOWUP_SENT.
         """
-        email = "partner@retailer-nl.nl"
+        email = "partner@retailer-fr.fr"
         sent_5_days_ago = (self.ref_now - datetime.timedelta(days=5)).isoformat()
         self.storage._leads[email] = {
             "email": email,
-            "company": "Retailer NL",
-            "country": "Netherlands",
-            "language": "nl",
+            "company": "Retailer FR",
+            "country": "France",
+            "language": "fr",
             "status": LeadStatus.OUTREACH_SENT,
-            "subject": "Safety Gate check voor Retailer NL?",
+            "subject": "Safety Gate check pour Retailer FR?",
             "sent_at": sent_5_days_ago,
             "resend_id": "resend_original_999",
             "history": [],
@@ -306,9 +306,40 @@ class TestCRMFollowupAndJurisdiction(unittest.TestCase):
         self.assertEqual(code_pl, "PL")
         self.assertIn("Art. 172", basis_pl)
 
-        # Test 3: Unbedenkliches Land (Niederlande / Frankreich)
-        is_restr_nl, _, _ = self.gate.check_jurisdiction("info@speelgoed.nl", "Netherlands")
-        self.assertFalse(is_restr_nl)
+        # Test 3: Gesperrtes Land (Niederlande Art. 11.7 Telecommunicatiewet) vs. Unbedenkliches Land (Frankreich)
+        is_restr_nl, code_nl, basis_nl = self.gate.check_jurisdiction("info@speelgoed.nl", "Netherlands")
+        self.assertTrue(is_restr_nl)
+        self.assertEqual(code_nl, "NL")
+        self.assertIn("Telecommunicatiewet", basis_nl)
+
+        is_restr_fr, _, _ = self.gate.check_jurisdiction("contact@jouets.fr", "France")
+        self.assertFalse(is_restr_fr)
+
+        # Test 3b: Fail-Closed bei unbekanntem oder leerem Land (F3)
+        is_restr_unknown, code_unk, basis_unk = self.gate.check_jurisdiction("ceo@mystery-shop.com", "")
+        self.assertTrue(is_restr_unknown, "Empty country must fail closed")
+        self.assertEqual(code_unk, "UNKNOWN")
+        self.assertIn("Fail-Closed", basis_unk)
+
+        is_restr_none, code_none, basis_none = self.gate.check_jurisdiction("sales@global-trade.net", None)
+        self.assertTrue(is_restr_none, "None country must fail closed")
+        self.assertEqual(code_none, "UNKNOWN")
+
+        # Test 3c: Deutschland (§ 7 UWG)
+        is_restr_de, code_de, basis_de = self.gate.check_jurisdiction("info@spielzeug-muenchen.de", "Deutschland")
+        self.assertTrue(is_restr_de, "Germany must be restricted under § 7 UWG")
+        self.assertEqual(code_de, "DE")
+        self.assertIn("UWG", basis_de)
+
+        # Test 3d: Parametrisierte Normalisierung (FR) und Fail-Closed
+        for c in ["fr", " FR ", "Fr", "france", " France ", "FRANKREICH"]:
+            is_restr_n, _, _ = self.gate.check_jurisdiction("a@b.fr", c)
+            self.assertFalse(is_restr_n, f"Country '{c}' with .fr must be permitted")
+
+        for c in ["XX", "  ", "", None, "USA", "UK", "China", "Unknown"]:
+            is_restr_fc, code_fc, _ = self.gate.check_jurisdiction("a@b.com", c)
+            self.assertTrue(is_restr_fc, f"Country '{c}' must fail closed")
+            self.assertEqual(code_fc, "UNKNOWN")
 
         # Test 4: Versuchter Dispatch an AT muss strikt mit ColdOutreachJurisdictionError abbrechen
         draft_at = {
@@ -431,12 +462,24 @@ class TestCRMFollowupAndJurisdiction(unittest.TestCase):
         ws_gate = ColdOutreachJurisdictionGate(storage=ws_storage)
         ws_engine = FollowUpEngine(storage=ws_storage, jurisdiction_gate=ws_gate, grace_period_days=4.0)
 
-        # Pruefe reale 24 Leads
+        # Pruefe reale gesendete Leads
         eligible = ws_engine.find_eligible_leads(reference_time=self.ref_now, grace_period_days=4.0)
-        self.assertEqual(len(eligible), 24, "All 24 real leads from FR and NL must be eligible for follow-up")
+        self.assertEqual(len(eligible), 10, "Only the 10 real leads from FR are eligible for email follow-up; 14 NL leads are blocked by Art. 11.7 Telecommunicatiewet")
 
         countries = {l.get("country") for l in eligible}
-        self.assertEqual(countries, {"France", "Netherlands"})
+        self.assertEqual(countries, {"France"})
+
+        # Pruefe NL Leads (14 Leads muessen unter Kaltakquise-Sperre fallen)
+        nl_leads = [
+            l for l in ws_storage.list_leads()
+            if l.get("country") == "Netherlands" or l.get("email", "").endswith(".nl")
+        ]
+        self.assertEqual(len(nl_leads), 14, "There must be exactly 14 leads from Netherlands")
+        for l in nl_leads:
+            is_restr, code, basis = ws_gate.check_jurisdiction(l.get("email"), l.get("country"))
+            self.assertTrue(is_restr, f"Lead {l.get('email')} must be restricted")
+            self.assertEqual(code, "NL")
+            self.assertIn("Telecommunicatiewet", basis)
 
         # Pruefe AT & PL Leads
         at_pl_leads = [

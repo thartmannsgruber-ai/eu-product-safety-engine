@@ -80,6 +80,10 @@ export interface AuditedItemInput {
   // GPSR-Readiness Ergebnis aus gpsr.ts
   gpsrReport?: GpsrReadinessReport | null;
 
+  // EAN-Datenqualität & Exponential-Verstümmelung
+  eanCorrupted?: boolean;
+  identifierWarning?: string;
+
   [key: string]: unknown;
 }
 
@@ -94,6 +98,8 @@ export interface EvaluatedAuditItem {
   category?: string;
   price?: number;
   quantity?: number;
+  eanCorrupted?: boolean;
+  identifierWarning?: string;
 
   // Ampel-Status
   trafficLight: AuditTrafficLight;
@@ -370,27 +376,28 @@ export function evaluateAuditItem(input: AuditedItemInput, index: number = 0): E
   // --------------------------------------------------------------------------
   // Ampel-Entscheidungsbaum:
   // ROT (RED):
-  //   - Akuter Barcode-Treffer im Safety Gate
-  //   - Fuzzy Match mit Score >= 0.85 (High Confidence / Klassifikation 'Rot')
+  //   - Akuter Barcode-Treffer im Safety Gate (ausschließlich verifizierte GTIN/EAN)
   //
   // GELB (YELLOW):
-  //   - Fuzzy Match mit 0.65 <= Score < 0.85 (Klassifikation 'Gelb')
+  //   - High-Confidence Fuzzy Match (Score >= 0.85): Verdachtsfall / manuelle Prüfung
+  //   - Medium-Confidence Fuzzy Match (0.65 <= Score < 0.85): Prüfbedarf Modellähnlichkeit
   //   - ODER unvollständige GPSR-Daten (Status !== 'COMPLIANT' oder Gaps vorhanden)
   //
   // GRÜN (GREEN):
   //   - Kein Barcode-Hit
   //   - Kein Fuzzy Match (Score < 0.65)
-  //   - GPSR geprüft und vollständig konform (Score 100% bzw. Status 'COMPLIANT')
+  //   - GPSR geprüft und in den Pflichtfeldern unauffällig (Status 'COMPLIANT')
   // --------------------------------------------------------------------------
   let trafficLight: AuditTrafficLight = 'GREEN';
   let trafficLightGerman: AuditTrafficLightGerman = 'Gruen';
-  let statusLabel = 'KONFORM / UNBEAUFSICHTIGT VERKAUFSFÄHIG';
-  let statusReason = 'Keine behördlichen Warnungen identifiziert; GPSR-Pflichtangaben vollständig.';
+  let statusLabel = 'UNAUFFÄLLIG / KEINE BEHÖRDLICHEN BEFUNDE (CHECKLISTE UNBEAUFSICHTIGT)';
+  let statusReason = 'Keine behördlichen Warnungen identifiziert; in den geprüften Pflichtfeldern keine Lücken erkannt (automatisierte Checkliste, keine Rechtsberatung gem. § 2 RDG).';
   let recommendedAction = 'Regulären Verkauf fortsetzen. Routinemäßiges Monitoring aufrechterhalten.';
   let priorityLevel: ActionPriority = 4;
 
   const isFuzzyRed = fuzzyMatched && (fuzzyScore >= 0.85 || fuzzyClassification === 'Rot');
   const isFuzzyYellow = fuzzyMatched && (fuzzyScore >= 0.65 && fuzzyScore < 0.85 || fuzzyClassification === 'Gelb');
+  const isEanCorrupted = Boolean(input.eanCorrupted || input.identifierWarning === 'EAN_CORRUPTED_EXCEL' || input.identifierWarning === 'INVALID_EAN_CHECKSUM');
   const isGpsrIncomplete = gpsrChecked && (gpsrStatus !== 'COMPLIANT' || gpsrGaps.length > 0 || gpsrTrafficLight !== 'GREEN');
 
   if (barcodeMatched) {
@@ -401,12 +408,12 @@ export function evaluateAuditItem(input: AuditedItemInput, index: number = 0): E
     recommendedAction = 'Sofortiger Verkaufsstopp im Seller Central, physische Lagersperre und Quarantäne veranlassen.';
     priorityLevel = 1;
   } else if (isFuzzyRed) {
-    trafficLight = 'RED';
-    trafficLightGerman = 'Rot';
-    statusLabel = 'VERTRIEBSSTOPP EMPFOHLEN (HOHE MATCH-KONFIDENZ)';
-    statusReason = `Hohe Übereinstimmung (${Math.round(fuzzyScore * 100)}%) mit Behördenmeldung (${fuzzyAlertNumber || 'Safety Gate'}).`;
-    recommendedAction = 'Listing vorsorglich pausieren, Modell-/Seriennummer mit Behördenmeldung abgleichen.';
-    priorityLevel = 1;
+    trafficLight = 'YELLOW';
+    trafficLightGerman = 'Gelb';
+    statusLabel = 'VERDACHT – MANUELLE PRÜFUNG ERFORDERLICH (HOHE MODELL-ÄHNLICHKEIT)';
+    statusReason = `Hohe Ähnlichkeit (${Math.round(fuzzyScore * 100)}%) mit Behördenmeldung (${fuzzyAlertNumber || 'Safety Gate'}), jedoch kein EAN-Nachweis. Keine automatische Auslistung.`;
+    recommendedAction = 'Manuelle Prüfung: Handelt es sich um das Originalgerät oder um kompatibles Zubehör/Ersatzteil? Typenschild vor Auslistung abgleichen.';
+    priorityLevel = 2;
   } else if (isFuzzyYellow) {
     trafficLight = 'YELLOW';
     trafficLightGerman = 'Gelb';
@@ -414,6 +421,13 @@ export function evaluateAuditItem(input: AuditedItemInput, index: number = 0): E
     statusReason = `Potenzielle Modellähnlichkeit (${Math.round(fuzzyScore * 100)}%) mit RAPEX-Meldung (${fuzzyAlertNumber || 'Safety Gate'}).`;
     recommendedAction = 'Manuelle Produktprüfung anhand Typenschild durchführen und Unbedenklichkeit dokumentieren.';
     priorityLevel = 2;
+  } else if (isEanCorrupted) {
+    trafficLight = 'YELLOW';
+    trafficLightGerman = 'Gelb';
+    statusLabel = 'PRÜFBEDARF (EAN-DATENQUALITÄT / VERSTÜMMELUNG)';
+    statusReason = 'EAN/GTIN im Händlerkatalog durch Excel-Exponentialdarstellung verstümmelt oder Prüfziffer ungültig. Automatisierter Registerabgleich blockiert (False-Negative-Schutz).';
+    recommendedAction = 'EAN/GTIN im Seller Central bzw. Warenwirtschaftssystem im Textformat ohne Exponentialschreibweise nachpflegen.';
+    priorityLevel = 3;
   } else if (isGpsrIncomplete) {
     trafficLight = 'YELLOW';
     trafficLightGerman = 'Gelb';
@@ -442,6 +456,8 @@ export function evaluateAuditItem(input: AuditedItemInput, index: number = 0): E
     category,
     price,
     quantity,
+    eanCorrupted: isEanCorrupted ? true : undefined,
+    identifierWarning: (input.identifierWarning as string) || undefined,
     trafficLight,
     trafficLightGerman,
     statusLabel,
@@ -526,21 +542,21 @@ export function buildActionPlan(
       const alertNo = item.fuzzy.alertNumber || 'RAPEX-Meldung';
       actions.push({
         id: `ACT-${String(counter++).padStart(3, '0')}`,
-        priority: 1,
-        urgency: 'CRITICAL',
-        deadlineHours: 24,
-        deadlineText: 'Sofort (innerhalb 24 Stunden)',
-        dueDate: calcDueDate(24),
-        category: 'SAFETY_GATE_RECALL',
+        priority: 2,
+        urgency: 'HIGH',
+        deadlineHours: 48,
+        deadlineText: 'Kurzfristig (innerhalb 48 Stunden)',
+        dueDate: calcDueDate(48),
+        category: 'FUZZY_MATCH_REVIEW',
         sku: item.sku,
         asin: item.asin,
         ean: item.ean,
         productTitle: item.title,
-        title: 'Vorsorglicher Verkaufsstopp & Modellnummern-Abgleich (High Match >= 85%)',
+        title: 'Manuelle Verifikation & Modell-Clearing (Hohe Ähnlichkeit >= 85%, Verdacht)',
         action:
-          'Listing vorsorglich pausieren. Physisches Typenschild und Seriennummer mit behördlicher Meldung abgleichen. Bei Bestätigung: Einheiten aus dem Verkehr ziehen.',
-        reason: `Sehr hohe Text- und Modellübereinstimmung (${Math.round(item.fuzzy.score * 100)}%) mit Warnung ${alertNo}.`,
-        legalBasis: '§ 3 ProdSG, Art. 9 Abs. 8 Verordnung (EU) 2023/988 (GPSR)',
+          'Prüfen, ob es sich um das betroffene Hauptprodukt oder kompatibles Zubehör/Ersatzteil handelt. Typenschild mit Behördenmeldung abgleichen. Unbedenklichkeit dokumentieren.',
+        reason: `Sehr hohe Text- und Modellübereinstimmung (${Math.round(item.fuzzy.score * 100)}%) mit Warnung ${alertNo}, jedoch kein EAN-Nachweis vorliegend.`,
+        legalBasis: 'Art. 9 Abs. 8 & Art. 14 Verordnung (EU) 2023/988 (GPSR)',
         orderIndex: 0,
       });
     }
@@ -880,7 +896,7 @@ export function generateMarkdownReport(report: B2BAuditReport): string {
       ? '🔴 **ROT (AKUTER HANDLUNGSBEDARF)**'
       : s.overallTrafficLight === 'YELLOW'
       ? '🟡 **GELB (PRÜFBEDARF & NACHPFLEGE)**'
-      : '🟢 **GRÜN (VOLLSTÄNDIG KONFORM)**';
+      : '🟢 **GRÜN (UNAUFFÄLLIG / CHECKLISTE OHNE LÜCKEN)**';
 
   md.push(`# B2B Produktsicherheits- & Compliance-Audit-Report`);
   md.push(``);
@@ -894,7 +910,7 @@ export function generateMarkdownReport(report: B2BAuditReport): string {
   md.push(`## 1. Executive Summary: Ampelsystem-Übersicht`);
   md.push(``);
   md.push(`**Gesamt-Status:** ${trafficBadge}`);
-  md.push(`**Compliance-Quote:** **${s.complianceRate}%** konforme Artikel`);
+  md.push(`**Compliance-Quote:** **${s.complianceRate}%** unauffällige Artikel ohne Lücken`);
   md.push(``);
   md.push(`| Status-Kategorie | Ampel | Anzahl Artikel | Anteil | Empfohlene Hauptreaktion |`);
   md.push(`| :--- | :---: | :---: | :---: | :--- |`);
@@ -908,7 +924,7 @@ export function generateMarkdownReport(report: B2BAuditReport): string {
   md.push(`### Prüfergebnisse nach Säulen`);
   md.push(`- **Barcode-Treffer (Safety Gate / RAPEX):** ${s.barcodeHitsCount} Treffer`);
   md.push(`- **Fuzzy-Matching Treffer:** ${s.fuzzyMatchesCount.total} (${s.fuzzyMatchesCount.red} mit Konfidenz $\\ge 85\\%$, ${s.fuzzyMatchesCount.yellow} im Prüfbereich $65\\text{--}84\\%$)`);
-  md.push(`- **GPSR-Readiness (EU 2023/988):** Ø ${s.gpsrSummary.averageScore}% Score (${s.gpsrSummary.compliantCount} konform, ${s.gpsrSummary.partiallyCompliantCount} teilkonform, ${s.gpsrSummary.nonCompliantCount} nicht konform; ${s.gpsrSummary.totalGapsCount} Lücken)`);
+  md.push(`- **GPSR-Readiness (EU 2023/988):** Ø ${s.gpsrSummary.averageScore}% Score (${s.gpsrSummary.compliantCount} ohne Lücken, ${s.gpsrSummary.partiallyCompliantCount} mit Teilnachweisen, ${s.gpsrSummary.nonCompliantCount} mit Nachpflegebedarf; ${s.gpsrSummary.totalGapsCount} Lücken)`);
   md.push(``);
 
   // Priorisierte Maßnahmenliste
@@ -1020,7 +1036,7 @@ export function generateHtmlReport(report: B2BAuditReport, options?: HtmlReportO
       ? 'ROT — AKUTER VERTRIEBSSTOPP EMPFOHLEN'
       : s.overallTrafficLight === 'YELLOW'
       ? 'GELB — PRÜFBEDARF & GPSR-NACHPFLEGE'
-      : 'GRÜN — VOLLSTÄNDIG KONFORM & VERKAUFSFÄHIG';
+      : 'GRÜN — UNAUFFÄLLIG (CHECKLISTE OHNE ERKENNBARE LÜCKEN)';
 
   const html: string[] = [];
 
@@ -1130,7 +1146,7 @@ export function generateHtmlReport(report: B2BAuditReport, options?: HtmlReportO
   html.push(`      <div class="status-banner">`);
   html.push(`        <div>`);
   html.push(`          <div class="status-banner-title">${escapeHtml(overallText)}</div>`);
-  html.push(`          <div class="status-banner-desc">${s.redCount > 0 ? `${s.redCount} Artikel mit akuten Behördenwarnungen erfordern sofortige Deaktivierung.` : s.yellowCount > 0 ? `${s.yellowCount} Artikel erfordern manuelle Verifikation oder GPSR-Nachpflege.` : 'Alle geprüften Artikel sind konform und unauffällig.'}</div>`);
+  html.push(`          <div class="status-banner-desc">${s.redCount > 0 ? `${s.redCount} Artikel mit akuten Behördenwarnungen erfordern sofortige Deaktivierung.` : s.yellowCount > 0 ? `${s.yellowCount} Artikel erfordern manuelle Verifikation oder GPSR-Nachpflege.` : 'In den geprüften Pflichtfeldern keine behördlichen Treffer oder Lücken erkannt (automatisierte Checkliste, keine Rechtsberatung gem. § 2 RDG).'}</div>`);
   html.push(`        </div>`);
   html.push(`        <div class="compliance-score">`);
   html.push(`          <div class="compliance-score-val">${s.complianceRate}%</div>`);
@@ -1142,7 +1158,7 @@ export function generateHtmlReport(report: B2BAuditReport, options?: HtmlReportO
   html.push(`      <div class="kpi-grid">`);
   html.push(`        <div class="kpi-card red"><div class="kpi-num" style="color:var(--red-600)">${s.redCount}</div><div class="kpi-title">Akute Treffer (Rot)</div><div class="kpi-desc">Sofortiger Verkaufsstopp empfohlen</div></div>`);
   html.push(`        <div class="kpi-card yellow"><div class="kpi-num" style="color:var(--yellow-600)">${s.yellowCount}</div><div class="kpi-title">Prüffälle / Lücken (Gelb)</div><div class="kpi-desc">Fuzzy-Match oder GPSR-Nachpflege</div></div>`);
-  html.push(`        <div class="kpi-card green"><div class="kpi-num" style="color:var(--green-600)">${s.greenCount}</div><div class="kpi-title">Konform (Grün)</div><div class="kpi-desc">Unauffällig & verkaufsfähig</div></div>`);
+  html.push(`        <div class="kpi-card green"><div class="kpi-num" style="color:var(--green-600)">${s.greenCount}</div><div class="kpi-title">Unauffällig (Grün)</div><div class="kpi-desc">Checkliste ohne erkannte Lücken</div></div>`);
   html.push(`        <div class="kpi-card"><div class="kpi-num">${s.totalItems}</div><div class="kpi-title">Geprüfte Artikel</div><div class="kpi-desc">${s.barcodeHitsCount} Barcode- & ${s.fuzzyMatchesCount.total} Fuzzy-Treffer</div></div>`);
   html.push(`      </div>`);
 
@@ -1340,6 +1356,19 @@ function createZipArchive(files: ZipFileEntry[]): Uint8Array {
   return new Uint8Array(totalBuffer);
 }
 
+/**
+ * Sanitizes a string value against CSV/Excel Formula Injection (CWE-1236).
+ * If a cell string starts with '=', '+', '-', '@', '\t', or '\r', Excel executes it as a formula.
+ * Prepending an apostrophe (') forces Excel to treat the cell strictly as plain text.
+ */
+export function sanitizeXlsxFormulaInjection(val: string): string {
+  if (!val) return '';
+  if (/^[=+\-@\t\r\n＝＋－＠]/.test(val) || /^[=+\-@＝＋－＠]/.test(val.trimStart())) {
+    return `'${val}`;
+  }
+  return val;
+}
+
 function buildWorksheetXml(rows: (string | number | boolean | null | undefined)[][]): string {
   const xml: string[] = [];
   xml.push(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>`);
@@ -1364,7 +1393,8 @@ function buildWorksheetXml(rows: (string | number | boolean | null | undefined)[
       } else if (typeof val === 'boolean') {
         xml.push(`      <c r="${cellRef}" t="b"><v>${val ? 1 : 0}</v></c>`);
       } else {
-        xml.push(`      <c r="${cellRef}" t="inlineStr"><is><t>${escapeXml(val)}</t></is></c>`);
+        const safeVal = sanitizeXlsxFormulaInjection(String(val));
+        xml.push(`      <c r="${cellRef}" t="inlineStr"><is><t>${escapeXml(safeVal)}</t></is></c>`);
       }
     }
 

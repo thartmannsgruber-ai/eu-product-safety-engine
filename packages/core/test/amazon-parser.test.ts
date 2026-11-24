@@ -7,6 +7,8 @@ import {
   normalizeHeaderKey,
   normalizeProductIdType,
   productIdTypeToNumeric,
+  isScientificNotationTruncated,
+  isSuspectZeroPaddedEan,
 } from '../src/amazon-parser.js';
 
 describe('Amazon Seller Central Inventory Report Parser (F03)', () => {
@@ -189,7 +191,7 @@ describe('Amazon Seller Central Inventory Report Parser (F03)', () => {
       expect(converted).toBe('123456789012');
     });
 
-    it('behebt wissenschaftliche Notation direkt beim Parsen des Amazon-Berichts', () => {
+    it('fängt verstümmelte wissenschaftliche Notation als EAN_CORRUPTED_EXCEL ab und erfindet keine Fake-EAN', () => {
       const report = [
         'seller-sku\tasin1\titem-name\tproduct-id\tproduct-id-type',
         'SKU-SCI\tB00004CK5B\tStabilo Boss\t4.00638E+12\t4',
@@ -198,8 +200,42 @@ describe('Amazon Seller Central Inventory Report Parser (F03)', () => {
       const result = parseAmazonInventoryReport(report);
 
       expect(result.items).toHaveLength(1);
-      expect(result.items[0].productId).toBe('4006380000000');
-      expect(result.items[0].ean).toBe('4006380000000');
+      expect(result.items[0].eanCorrupted).toBe(true);
+      expect(result.items[0].identifierWarning).toBe('EAN_CORRUPTED_EXCEL');
+      expect(result.items[0].ean).toBeUndefined(); // Verhindert Fake-Barcode-Matching
+      expect(result.errors.some((e) => e.code === 'EAN_CORRUPTED_EXCEL')).toBe(true);
+    });
+
+    it('erkennt unbeschädigte wissenschaftliche Notation mit vollständiger Prüfziffer', () => {
+      const report = [
+        'seller-sku\tasin1\titem-name\tproduct-id\tproduct-id-type',
+        'SKU-SCI-EXACT\tB00004CK5B\tStabilo Boss\t4.006381333931E+12\t4',
+      ].join('\n');
+
+      const result = parseAmazonInventoryReport(report);
+
+      expect(result.items).toHaveLength(1);
+      expect(result.items[0].eanCorrupted).toBeFalsy();
+      expect(result.items[0].ean).toBe('4006381333931');
+    });
+
+    it('erkennt numerisch gespeicherte Zero-Padded EANs als EAN_SUSPECT_TRUNCATED (F1)', () => {
+      expect(isSuspectZeroPaddedEan('4006380000000')).toBe(true);
+      expect(isSuspectZeroPaddedEan('1234560000000')).toBe(true);
+      expect(isSuspectZeroPaddedEan('4006381333931')).toBe(false);
+
+      const report = [
+        'seller-sku\tasin1\titem-name\tproduct-id\tproduct-id-type',
+        'SKU-SUSPECT-ZERO\tB00004CK5B\tStabilo Boss\t4006380000000\t4',
+      ].join('\n');
+
+      const result = parseAmazonInventoryReport(report);
+
+      expect(result.items).toHaveLength(1);
+      expect(result.items[0].eanCorrupted).toBe(true);
+      expect(result.items[0].identifierWarning).toBe('EAN_SUSPECT_TRUNCATED');
+      expect(result.items[0].ean).toBeUndefined(); // Verhindert Fake-Barcode-Matching
+      expect(result.errors.some((e) => e.code === 'EAN_SUSPECT_TRUNCATED')).toBe(true);
     });
   });
 
@@ -265,13 +301,13 @@ describe('Amazon Seller Central Inventory Report Parser (F03)', () => {
       const report = [
         'seller-sku\tasin1\tproduct-id\tproduct-id-type',
         'SKU-A\tB00004CK5B\t4006381333931\t4',
-        'SKU-B\tB00004CK5C\t4006381333932\t4',
+        'SKU-B\tB00004CK5C\t4006381333948\t4',
       ].join('\n');
 
       const result = parseAmazonInventoryReport(report);
 
       expect(result.asinEanMap.get('B00004CK5B')).toBe('4006381333931');
-      expect(result.asinEanMap.get('B00004CK5C')).toBe('4006381333932');
+      expect(result.asinEanMap.get('B00004CK5C')).toBe('4006381333948');
 
       expect(result.bySku.get('SKU-A')?.asin1).toBe('B00004CK5B');
       expect(result.byAsin.get('B00004CK5C')?.sellerSku).toBe('SKU-B');

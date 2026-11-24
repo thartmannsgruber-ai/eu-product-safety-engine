@@ -209,6 +209,27 @@ class ColdOutreachJurisdictionGate:
             "legal_basis": "Spanien (Art. 21 LSSI / Ley 34/2002): Verbot unaufgeforderter kommerzieller E-Mails ohne vorherige ausdrückliche Einwilligung.",
             "language": "es",
         },
+        "NL": {
+            "country_names": {"netherlands", "niederlande", "nederland", "nl", "nld", "holland"},
+            "tld": ".nl",
+            "legal_basis": "Niederlande (Art. 11.7 Telecommunicatiewet): Verbot unaufgeforderter elektronischer Werbung ohne vorherige Einwilligung auch gegenüber juristischen Personen (B2B).",
+            "language": "en",
+        },
+        "DE": {
+            "country_names": {"germany", "deutschland", "de", "deu", "ger"},
+            "tld": ".de",
+            "legal_basis": "Deutschland (§ 7 Abs. 2 Nr. 2 UWG): Verbot unaufgeforderter E-Mail-Kaltakquise ohne vorherige ausdrückliche Einwilligung (B2B-Opt-In-Pflicht).",
+            "language": "de",
+        },
+    }
+
+    # Explizite Positiv-Liste (Allowlist) fuer Laender mit bestaetigter B2B-Opt-Out-Zulaessigkeit
+    PERMITTED_OPT_OUT_JURISDICTIONS = {
+        "FR": {
+            "country_names": {"france", "frankreich", "fr", "fra"},
+            "tld": ".fr",
+            "legal_basis": "Frankreich (CNIL B2B Richtlinie): Opt-Out fuer B2B-Kaltakquise bei fachlichem Sachbezug zulaessig.",
+        },
     }
 
     def __init__(
@@ -225,17 +246,27 @@ class ColdOutreachJurisdictionGate:
         country: Optional[str] = None,
     ) -> Tuple[bool, Optional[str], Optional[str]]:
         """
-        Prueft ob ein Empfaenger unter ein Kaltakquise-Verbot faellt (AT, PL, IT, ES).
+        Prueft ob ein Empfaenger unter ein Kaltakquise-Verbot faellt (Fail-Closed).
+        - AT, PL, IT, ES, NL, DE: Strikt verboten (Opt-In zwingend).
+        - FR, BE: Erlaubt bei fachlichem B2B-Bezug (Opt-Out).
+        - Unbekannt / Leeres Land: FAIL-CLOSED (Vorsorglich blockiert).
         Rueckgabe: (is_restricted, country_code, legal_basis)
         """
         norm_email = normalize_email(email)
         norm_country = (country or "").strip().lower()
 
+        # 1. Strikt gesperrte Laender pruefen
         for c_code, info in self.RESTRICTED_JURISDICTIONS.items():
             if norm_country in info["country_names"] or norm_email.endswith(info["tld"]):
                 return True, c_code, info["legal_basis"]
 
-        return False, None, None
+        # 2. Positivliste (Allowlist) pruefen
+        for c_code, info in self.PERMITTED_OPT_OUT_JURISDICTIONS.items():
+            if norm_country in info["country_names"] or norm_email.endswith(info["tld"]):
+                return False, None, None
+
+        # 3. Fail-Closed: Wenn kein Land oder unbekannte Jurisdiktion -> Sperren!
+        return True, "UNKNOWN", "Unbekannte oder nicht verifizierte Jurisdiktion (Fail-Closed: Kaltakquise ohne nachgewiesene B2B-Opt-Out-Erlaubnis vorsorglich gesperrt)."
 
     def generate_linkedin_search_url(self, company: str) -> str:
         """Erzeugt eine LinkedIn-Such-URL fuer das Unternehmen."""
@@ -300,6 +331,7 @@ class ColdOutreachJurisdictionGate:
             metadata={
                 "original_status": lead.get("status"),
                 "routed_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                "compliance_note": "Recherche / Profil-Identifikation (manuelle Prüfung; kein unaufgeforderter automatisierter Erstkontakt per InMail/DM ohne vorherige Einwilligung gem. § 7 UWG / Art. 11.7 Tw; DSGVO Art. 14 beachten)",
             },
         )
 

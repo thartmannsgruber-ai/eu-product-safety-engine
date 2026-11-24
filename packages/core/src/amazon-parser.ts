@@ -19,6 +19,8 @@ export interface AmazonInventoryItem {
   quantity?: number;
   ean?: string;
   upc?: string;
+  eanCorrupted?: boolean;
+  identifierWarning?: 'EAN_CORRUPTED_EXCEL' | 'EAN_SUSPECT_TRUNCATED' | 'INVALID_EAN_CHECKSUM' | string;
   raw?: Record<string, string>;
 }
 
@@ -147,6 +149,33 @@ export function convertScientificToString(val: unknown): string {
   }
 
   return s;
+}
+
+/**
+ * Detects whether a string in scientific notation represents a truncated number where
+ * precision was lost (e.g. Excel exporting 4.00638E+12 instead of full 13 digits).
+ * If the positive exponent is strictly greater than the number of decimal digits provided,
+ * trailing zeros would have to be invented, which corrupts EAN/UPC barcodes.
+ */
+export function isScientificNotationTruncated(val: unknown): boolean {
+  if (val === null || val === undefined) return false;
+  const s = String(val).trim().replace(/^["']+|["']+$/g, '');
+  const sciMatch = s.match(/^([+-]?\d+)(?:[.,](\d+))?[eE]([+-]?\d+)$/i);
+  if (!sciMatch) return false;
+  const decPart = sciMatch[2] || '';
+  const exp = parseInt(sciMatch[3], 10);
+  return exp > 0 && exp > decPart.length;
+}
+
+/**
+ * Detects numbers that were likely saved from Excel after exponential truncation,
+ * resulting in trailing invented zeros (e.g. 4006380000000 or 123450000000).
+ * Barcodes with 5 or more trailing zeros on 12-14 digit numbers indicate artificial zero-padding.
+ */
+export function isSuspectZeroPaddedEan(val: unknown): boolean {
+  if (val === null || val === undefined) return false;
+  const s = String(val).trim().replace(/^["']+|["']+$/g, '');
+  return /^\d{12,14}$/.test(s) && /0{5,}$/.test(s);
 }
 
 /**
@@ -682,6 +711,8 @@ export function parseAmazonInventoryReport(
 
     // Process Product ID & scientific notation conversion
     let productId = rawProductId;
+    const isTruncated = isScientificNotationTruncated(productId);
+    const isZeroPadded = isSuspectZeroPaddedEan(productId);
     if (shouldConvertScientific && productId) {
       productId = convertScientificToString(productId);
     }
@@ -701,30 +732,50 @@ export function parseAmazonInventoryReport(
       asin = productId.toUpperCase();
     }
 
-    // Process EAN / UPC
+    // Process EAN / UPC with strict checksum verification
     let ean: string | undefined;
     let upc: string | undefined;
+    let eanCorrupted = false;
+    let identifierWarning: 'EAN_CORRUPTED_EXCEL' | 'EAN_SUSPECT_TRUNCATED' | 'INVALID_EAN_CHECKSUM' | undefined;
 
-    if (productId) {
-      if (productIdType === 'EAN' || (!rawProductIdType && isValidEan(productId))) {
-        ean = cleanBarcode(productId);
-      } else if (productIdType === 'UPC' || (!rawProductIdType && isValidUpcA(productId))) {
-        upc = productId;
-        // UPC-A is a valid GTIN-12 and EAN-compatible
-        ean = cleanBarcode(productId);
+    if (isTruncated || isZeroPadded) {
+      eanCorrupted = true;
+      identifierWarning = isTruncated ? 'EAN_CORRUPTED_EXCEL' : 'EAN_SUSPECT_TRUNCATED';
+      errors.push({
+        row: rowNumber,
+        sku: sellerSku,
+        reason: `EAN durch Excel verstümmelt oder verdächtige Null-Auffüllung (${rawProductId}). Manuelle Prüfung erforderlich.`,
+        code: identifierWarning,
+        rawRow: row,
+      });
+      // Do NOT set ean! Prevent matching on truncated zero-padded fake barcodes.
+    } else if (productId) {
+      const cleaned = cleanBarcode(productId);
+      if (isValidEan(cleaned)) {
+        ean = cleaned;
+      } else if (isValidUpcA(cleaned)) {
+        upc = cleaned;
+        ean = cleaned; // UPC-A is a valid GTIN-12 and EAN-compatible
       } else if (productIdType === 'ISBN') {
         if (isIsbn10Asin(productId)) {
           ean = isbn10ToEan13(productId);
-        } else if (isValidEan(productId)) {
-          ean = cleanBarcode(productId);
+        } else if (isValidEan(cleaned)) {
+          ean = cleaned;
         }
-      } else if (isValidEan(productId)) {
-        ean = cleanBarcode(productId);
+      } else if (productIdType === 'EAN' || productIdType === 'UPC') {
+        identifierWarning = 'INVALID_EAN_CHECKSUM';
+        errors.push({
+          row: rowNumber,
+          sku: sellerSku,
+          reason: `Produkt-ID ${productId} als ${productIdType} deklariert, besitzt jedoch eine ungültige Prüfziffer`,
+          code: 'INVALID_EAN_CHECKSUM',
+          rawRow: row,
+        });
       }
     }
 
     // Also if ASIN is ISBN-10, we can derive EAN
-    if (!ean && asin && isIsbn10Asin(asin)) {
+    if (!ean && !eanCorrupted && asin && isIsbn10Asin(asin)) {
       ean = isbn10ToEan13(asin);
     }
 
@@ -754,6 +805,8 @@ export function parseAmazonInventoryReport(
       quantity,
       ean,
       upc,
+      eanCorrupted: eanCorrupted ? true : undefined,
+      identifierWarning,
       raw: rawMap,
     };
 

@@ -84,6 +84,9 @@ class TestE2EPipelineIntegration:
         assert is_restricted_es is True
         assert "LSSI" in (legal_es or "")
 
-        # Erlaubte Jurisdiktionen (FR & NL)
+        is_restricted_nl, country_nl, legal_nl = gate.check_jurisdiction("info@amsterdam.nl", "NL")
+        assert is_restricted_nl is True
+        assert "Telecommunicatiewet" in (legal_nl or "")
+
+        # Erlaubte Jurisdiktion (FR)
         assert not gate.check_jurisdiction("contact@paris.fr", "FR")[0]
-        assert not gate.check_jurisdiction("info@amsterdam.nl", "NL")[0]

@@ -175,12 +175,22 @@ def run_crm_e2e() -> dict:
     assert "LSSI" in (es_legal or "")
     print(f"  [Jurisdiction Gate] ES (Spanien): E-Mail blockiert ({es_legal}), Task auf LinkedIn umgeleitet.")
 
-    # Frankreich / Niederlande: Erlaubt
+    # Frankreich: Erlaubt (Opt-Out B2B)
     fr_restricted, _, _ = gate.check_jurisdiction("contact@toys.fr", "FR")
     assert fr_restricted is False
-    nl_restricted, _, _ = gate.check_jurisdiction("info@speelgoed.nl", "NL")
-    assert nl_restricted is False
-    print(f"  [Jurisdiction Gate] FR & NL: B2B Kaltakquise konform freigegeben.")
+    print("  [Jurisdiction Gate] FR (Frankreich): B2B Kaltakquise konform freigegeben (Opt-Out).")
+
+    # Niederlande: Verboten (Art. 11.7 Telecommunicatiewet)
+    nl_restricted, nl_country, nl_legal = gate.check_jurisdiction("info@speelgoed.nl", "NL")
+    assert nl_restricted is True
+    assert "Telecommunicatiewet" in (nl_legal or "")
+    print(f"  [Jurisdiction Gate] NL (Niederlande): E-Mail blockiert ({nl_legal}), Task auf LinkedIn umgeleitet.")
+
+    # Deutschland: Verboten (§ 7 Abs. 2 Nr. 2 UWG)
+    de_restricted, de_country, de_legal = gate.check_jurisdiction("kontakt@spielwaren.de", "DE")
+    assert de_restricted is True
+    assert "UWG" in (de_legal or "")
+    print(f"  [Jurisdiction Gate] DE (Deutschland): E-Mail blockiert ({de_legal}), Task auf LinkedIn umgeleitet.")
 
     # Exportiere Zusammenfassung
     crm_summary = {

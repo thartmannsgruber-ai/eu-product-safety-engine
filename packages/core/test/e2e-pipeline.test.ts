@@ -177,4 +177,26 @@ describe('End-to-End Pipeline Integration (F09)', () => {
     expect(xlsx[2]).toBe(0x03);
     expect(xlsx[3]).toBe(0x04);
   });
+
+  it('suspect zero-padded EAN never yields GREEN (F1 Integration)', () => {
+    const rawTsv = [
+      'seller-sku\tasin1\titem-name\tproduct-id\tproduct-id-type',
+      'SKU-ZERO-EAN\tB08N5WRW99\tSuspect Toy\t4006380000000\t4',
+    ].join('\n');
+
+    const parsed = parseAmazonInventoryReport(rawTsv);
+    expect(parsed.items).toHaveLength(1);
+    expect(parsed.items[0].eanCorrupted).toBe(true);
+    expect(parsed.items[0].ean).toBeUndefined();
+
+    const report = createAuditReport({
+      merchantName: 'Suspect Merchant',
+      items: parsed.items,
+    });
+
+    expect(report.items[0].trafficLight).toBe('YELLOW');
+    expect(report.items[0].trafficLight).not.toBe('GREEN');
+    expect(report.summary.greenCount).toBe(0);
+    expect(report.summary.yellowCount).toBe(1);
+  });
 });

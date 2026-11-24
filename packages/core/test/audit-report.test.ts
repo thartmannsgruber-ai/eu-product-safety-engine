@@ -13,6 +13,7 @@ import {
   formatSafetyGateDate,
   getLegalDisclaimer,
   getZeroHitsNotice,
+  sanitizeXlsxFormulaInjection,
   DISCLAIMER_LEGAL_NOTICE,
   DISCLAIMER_SAFETY_GATE_SOURCE_TEMPLATE,
   DISCLAIMER_MERCHANT_OBLIGATION,
@@ -206,14 +207,14 @@ describe('B2B Multi-Format Audit Report Generator (F05)', () => {
       expect(evaluated.statusLabel).toMatch(/VERTRIEBSSTOPP/i);
     });
 
-    it('klassifiziert High-Confidence Fuzzy-Matches (Score >= 0.85) als ROT (RED)', () => {
+    it('klassifiziert High-Confidence Fuzzy-Matches (Score >= 0.85) als GELB (YELLOW / Verdachtsfall)', () => {
       const evaluated = evaluateAuditItem(mockFuzzyRedItem);
-      expect(evaluated.trafficLight).toBe('RED');
-      expect(evaluated.trafficLightGerman).toBe('Rot');
+      expect(evaluated.trafficLight).toBe('YELLOW');
+      expect(evaluated.trafficLightGerman).toBe('Gelb');
       expect(evaluated.fuzzy.matched).toBe(true);
       expect(evaluated.fuzzy.score).toBeGreaterThanOrEqual(0.85);
-      expect(evaluated.priorityLevel).toBe(1);
-      expect(evaluated.statusLabel).toMatch(/VERTRIEBSSTOPP/i);
+      expect(evaluated.priorityLevel).toBe(2);
+      expect(evaluated.statusLabel).toMatch(/VERDACHT/i);
     });
 
     it('klassifiziert Medium-Confidence Fuzzy-Matches (0.65 <= Score < 0.85) als GELB (YELLOW)', () => {
@@ -242,7 +243,7 @@ describe('B2B Multi-Format Audit Report Generator (F05)', () => {
       expect(evaluated.barcode.matched).toBe(false);
       expect(evaluated.fuzzy.matched).toBe(false);
       expect(evaluated.gpsr.status).toBe('COMPLIANT');
-      expect(evaluated.statusLabel).toMatch(/KONFORM/i);
+      expect(evaluated.statusLabel).toMatch(/UNAUFFÄLLIG|KONFORM/i);
     });
 
     it('aggregiert alle 3 Säulen in einer korrekten AuditSummary', () => {
@@ -259,8 +260,8 @@ describe('B2B Multi-Format Audit Report Generator (F05)', () => {
 
       const s = report.summary;
       expect(s.totalItems).toBe(5);
-      expect(s.redCount).toBe(2); // Barcode-Hit + Fuzzy-Red
-      expect(s.yellowCount).toBe(2); // Fuzzy-Yellow + GPSR-Incomplete
+      expect(s.redCount).toBe(1); // Ausschließlich EAN-Treffer
+      expect(s.yellowCount).toBe(3); // Fuzzy-High + Fuzzy-Medium + GPSR-Incomplete
       expect(s.greenCount).toBe(1); // Compliant
       expect(s.overallTrafficLight).toBe('RED');
       expect(s.overallTrafficLightGerman).toBe('Rot');
@@ -458,8 +459,8 @@ describe('B2B Multi-Format Audit Report Generator (F05)', () => {
       // Ampel & Summary
       expect(md).toContain('## 1. Executive Summary: Ampelsystem-Übersicht');
       expect(md).toContain('🔴 **ROT (AKUTER HANDLUNGSBEDARF)**');
-      expect(md).toContain('| **Akute Treffer (Rot)** | 🔴 | **2** |');
-      expect(md).toContain('| **Prüfbedarf / Nachpflege (Gelb)** | 🟡 | **2** |');
+      expect(md).toContain('| **Akute Treffer (Rot)** | 🔴 | **1** |');
+      expect(md).toContain('| **Prüfbedarf / Nachpflege (Gelb)** | 🟡 | **3** |');
       expect(md).toContain('| **Konform / Unauffällig (Grün)** | 🟢 | **1** |');
 
       // Maßnahmenliste
@@ -568,10 +569,77 @@ describe('B2B Multi-Format Audit Report Generator (F05)', () => {
       expect(md).toContain('Keine offenen Maßnahmen erforderlich');
 
       const html = emptyReport.toHtml();
-      expect(html).toContain('GRÜN — VOLLSTÄNDIG KONFORM &amp; VERKAUFSFÄHIG');
+      expect(html).toContain('GRÜN — UNAUFFÄLLIG');
 
       const xlsx = emptyReport.toXlsx();
       expect(xlsx.length).toBeGreaterThan(500);
+    });
+
+    it('schützt Textzellen im XLSX-Export vor Formel-Injektion (CWE-1236)', () => {
+      expect(sanitizeXlsxFormulaInjection('=cmd|/c calc')).toBe("'=cmd|/c calc");
+      expect(sanitizeXlsxFormulaInjection(' =cmd|/c calc')).toBe("' =cmd|/c calc");
+      expect(sanitizeXlsxFormulaInjection('\n=1+1')).toBe("'\n=1+1");
+      expect(sanitizeXlsxFormulaInjection('+1+1')).toBe("'+1+1");
+      expect(sanitizeXlsxFormulaInjection('-1-1')).toBe("'-1-1");
+      expect(sanitizeXlsxFormulaInjection('@SUM(A1:A10)')).toBe("'@SUM(A1:A10)");
+      expect(sanitizeXlsxFormulaInjection('＝1+1')).toBe("'＝1+1");
+      expect(sanitizeXlsxFormulaInjection('＠SUM(A1)')).toBe("'＠SUM(A1)");
+      expect(sanitizeXlsxFormulaInjection('\tmalicious')).toBe("'\tmalicious");
+      expect(sanitizeXlsxFormulaInjection('Normal Title 123')).toBe('Normal Title 123');
+    });
+
+    it('klassifiziert Artikel mit verstümmelter EAN (eanCorrupted) als GELB (Prüfbedarf) und niemals als GRÜN', () => {
+      const corruptedItem: AuditedItemInput = {
+        id: 'ITEM-CORRUPTED-01',
+        sku: 'SKU-CORRUPTED',
+        asin: 'B08N5WRW99',
+        title: 'Artikel mit verstümmelter EAN',
+        eanCorrupted: true,
+        identifierWarning: 'EAN_CORRUPTED_EXCEL',
+        gpsrReport: {
+          listingId: 'ITEM-CORRUPTED-01',
+          sku: 'SKU-CORRUPTED',
+          asin: 'B08N5WRW99',
+          title: 'Artikel mit verstümmelter EAN',
+          score: 100,
+          status: 'COMPLIANT',
+          trafficLight: 'GREEN',
+          isCompliant: true,
+          gaps: [],
+          sections: {} as any,
+          summary: { criticalGapsCount: 0, highGapsCount: 0, mediumGapsCount: 0, lowGapsCount: 0, totalGapsCount: 0 },
+        },
+      };
+
+      const evaluated = evaluateAuditItem(corruptedItem);
+      expect(evaluated.trafficLight).toBe('YELLOW');
+      expect(evaluated.trafficLightGerman).toBe('Gelb');
+      expect(evaluated.priorityLevel).toBe(3);
+      expect(evaluated.statusLabel).toMatch(/PRÜFBEDARF.*EAN/i);
+    });
+
+    it('EAN_CORRUPTED does not downgrade RED from confirmed Safety Gate hit (F2 Präzedenz)', () => {
+      const redAndCorruptedItem: AuditedItemInput = {
+        id: 'ITEM-RED-AND-CORRUPTED',
+        sku: 'SKU-RED-CORRUPTED',
+        asin: 'B08N5WRW01',
+        title: 'Gefährliches Produkt mit bestätigtem Treffer und verstümmelter EAN',
+        eanCorrupted: true,
+        identifierWarning: 'EAN_CORRUPTED_EXCEL',
+        barcodeHit: true,
+        barcodeMatch: {
+          matched: true,
+          alertNumber: 'A12/00999/26',
+          productName: 'Gefährliches Produkt',
+          riskType: 'Brandgefahr',
+        },
+      };
+
+      const evaluated = evaluateAuditItem(redAndCorruptedItem);
+      expect(evaluated.trafficLight).toBe('RED');
+      expect(evaluated.trafficLightGerman).toBe('Rot');
+      expect(evaluated.priorityLevel).toBe(1);
+      expect(evaluated.statusLabel).toMatch(/VERTRIEBSSTOPP EMPFOHLEN/i);
     });
   });
 });
