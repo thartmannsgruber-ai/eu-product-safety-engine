@@ -85,6 +85,7 @@ def cmd_status(args: argparse.Namespace) -> int:
     print(f"    - REPLIED_POSITIVE:      {lead_counts.get(LeadStatus.REPLIED_POSITIVE, 0)}")
     print(f"    - REPLIED_INQUIRY:       {lead_counts.get(LeadStatus.REPLIED_INQUIRY, 0)}")
     print(f"    - LOST_BLACKLISTED:      {lead_counts.get(LeadStatus.LOST_BLACKLISTED, 0)}")
+    print(f"    - BOUNCED:               {lead_counts.get(LeadStatus.BOUNCED, 0)} (Hard-Bounce 5.x.x, terminal)")
 
     print("\n[2] REVIEW QUEUE (review_queue.json):")
     total_drafts = sum(queue_counts.values())

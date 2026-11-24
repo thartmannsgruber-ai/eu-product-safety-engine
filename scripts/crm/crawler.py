@@ -25,7 +25,7 @@ import logging
 import unicodedata
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 
 from scripts.crm.blacklist import (
     BlacklistedRecipientError,
@@ -41,12 +41,149 @@ from scripts.crm.classifier import (
     strip_quoted_reply,
 )
 from scripts.crm.storage import (
+    TERMINAL_STATUSES,
     CRMStorage,
     LeadStatus,
+    TerminalStatusTransitionError,
     get_default_storage,
 )
 
 _HTML_STRIP_RE = re.compile(r"<[^>]+>")
+logger = logging.getLogger("CRM.Crawler")
+
+# ---------------------------------------------------------------------------
+# Bounce / DSN Erkennung (RFC 3464)
+# ---------------------------------------------------------------------------
+_BOUNCE_SENDER_RE = re.compile(r"^(mailer-daemon|postmaster|mail-daemon|bounces?)(\+[^@]*)?@", re.I)
+_BOUNCE_SUBJECT_RE = re.compile(
+    r"(undeliverable|undelivered mail|delivery status notification|delivery failure|"
+    r"delivery has failed|mail delivery failed|returned mail|failure notice|"
+    r"unzustellbar|nicht zustellbar|non remis|\bDSN\b)",
+    re.I,
+)
+_DSN_STATUS_RE = re.compile(r"(?im)^\s*Status:\s*([245])\.(\d{1,3})\.(\d{1,3})")
+_SMTP_ENH_RE = re.compile(r"\b([45])\.(\d{1,3})\.(\d{1,3})\b")
+_FINAL_RCPT_RE = re.compile(r"(?im)^\s*(?:Final|Original)-Recipient:\s*(?:rfc822;)?\s*<?([^\s<>;]+@[^\s<>;]+)>?")
+_EMAIL_RE = re.compile(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}")
+
+
+def _extract_dsn_text(msg: Any) -> str:
+    """Sammelt den Text aller message/delivery-status Teile einer MIME-Nachricht."""
+    chunks: List[str] = []
+    try:
+        for part in msg.walk():
+            ctype = (part.get_content_type() or "").lower()
+            if ctype in ("message/delivery-status", "message/global-delivery-status"):
+                payload = part.get_payload()
+                if isinstance(payload, list):
+                    for sub in payload:
+                        chunks.append(str(sub))
+                elif isinstance(payload, (bytes, bytearray)):
+                    chunks.append(payload.decode("utf-8", errors="replace"))
+                elif payload:
+                    chunks.append(str(payload))
+    except Exception:  # pragma: no cover - defensiv
+        pass
+    return "\n".join(chunks)
+
+
+def detect_bounce(
+    parsed: Dict[str, Any],
+    own_addresses: Optional[Set[str]] = None,
+    is_known_lead: Optional[Callable[[str], bool]] = None,
+) -> Optional[Dict[str, Any]]:
+    """
+    Erkennt Bounce-/DSN-Nachrichten.
+
+    Rueckgabe None wenn keine Bounce, sonst Dict mit:
+      kind: "HARD" (5.x.x) | "SOFT" (4.x.x) | "UNKNOWN"
+      status_code, recipients (Liste), signals (Liste).
+
+    Sicherheitsregeln (Risiko 1):
+      - Eigene Adressen (own_addresses) und der DSN-Absender werden nie als
+        Empfaenger gewertet.
+      - Strukturierte Quellen (X-Failed-Recipients, Final-/Original-Recipient)
+        werden direkt uebernommen.
+      - Der Regex-Fallback ueber Freitext greift NUR fuer Adressen, die laut
+        is_known_lead bereits als Lead im CRM existieren. Ohne Lookup ist der
+        Fallback deaktiviert (fail-closed).
+    """
+    sender = (parsed.get("from_email") or "").lower()
+    subject = parsed.get("subject") or ""
+    ctype = (parsed.get("content_type") or "").lower()
+    dsn_text = parsed.get("dsn_text") or ""
+    body = parsed.get("body") or ""
+    x_failed = parsed.get("x_failed_recipients") or ""
+
+    signals: List[str] = []
+    if _BOUNCE_SENDER_RE.match(sender):
+        signals.append("sender")
+    if "multipart/report" in ctype or "delivery-status" in ctype:
+        signals.append("content_type")
+    if dsn_text:
+        signals.append("dsn_part")
+    if x_failed:
+        signals.append("x_failed_recipients")
+    if _BOUNCE_SUBJECT_RE.search(subject):
+        signals.append("subject")
+
+    strong = {"sender", "content_type", "dsn_part", "x_failed_recipients"}
+    # Betreff allein reicht nicht (Schutz vor Fehlklassifikation echter Antworten).
+    if not strong.intersection(signals):
+        return None
+
+    combined = f"{dsn_text}\n{body}"
+    status_code = ""
+    m = _DSN_STATUS_RE.search(combined)
+    if m:
+        status_code = ".".join(m.groups())
+    else:
+        m2 = _SMTP_ENH_RE.search(combined)
+        if m2:
+            status_code = ".".join(m2.groups())
+
+    if status_code.startswith("5"):
+        kind = "HARD"
+    elif status_code.startswith("4"):
+        kind = "SOFT"
+    else:
+        kind = "UNKNOWN"
+
+    own = {normalize_email(a) for a in (own_addresses or set()) if a}
+    own.add(sender)
+
+    recipients: List[str] = []
+
+    def _add(addr: str) -> None:
+        n = normalize_email(addr.strip().strip("<>;,"))
+        if n and "@" in n and n not in own and not _BOUNCE_SENDER_RE.match(n) and n not in recipients:
+            recipients.append(n)
+
+    for addr in re.split(r"[,\s]+", x_failed):
+        if "@" in addr:
+            _add(addr)
+    for fm in _FINAL_RCPT_RE.finditer(combined):
+        _add(fm.group(1))
+    if not recipients and is_known_lead is not None:
+        for em in _EMAIL_RE.findall(combined):
+            n = normalize_email(em.strip().strip("<>;,"))
+            if not n or n in own:
+                continue
+            try:
+                known = bool(is_known_lead(n))
+            except Exception:  # pragma: no cover - defensiv
+                known = False
+            if known:
+                _add(n)
+                break
+
+    return {
+        "kind": kind,
+        "status_code": status_code,
+        "recipients": recipients,
+        "signals": signals,
+    }
+
 
 
 def load_env_crawler() -> Dict[str, str]:
@@ -173,6 +310,7 @@ class InboundMailCrawler:
         imap_port: int = 993,
         imap_user: Optional[str] = None,
         imap_pass: Optional[str] = None,
+        own_addresses: Optional[Set[str]] = None,
     ) -> None:
         base_dir = Path(__file__).resolve().parent.parent.parent
         self.storage = storage or get_default_storage()
@@ -196,6 +334,21 @@ class InboundMailCrawler:
         self.imap_port = int(imap_port or os.environ.get("IMAP_PORT") or env.get("IMAP_PORT", 993))
         self.imap_user = imap_user or os.environ.get("IMAP_USER") or env.get("IMAP_USER") or env.get("SMTP_USER")
         self.imap_pass = imap_pass or os.environ.get("IMAP_PASS") or env.get("IMAP_PASS") or env.get("SMTP_PASS")
+
+        # Eigene Postfach-/Absenderadressen: werden bei Bounce-Erkennung nie als
+        # gebouncter Empfaenger gewertet (Schutz vor Selbst-Quarantaene).
+        own: Set[str] = set()
+        for key in ("IMAP_USER", "SMTP_USER", "MS_GRAPH_MAILBOX", "REPLY_TO",
+                    "RESEND_FROM", "RESEND_FROM_EMAIL", "FROM_EMAIL", "OUTREACH_FROM"):
+            val = os.environ.get(key) or env.get(key)
+            if val:
+                for em in _EMAIL_RE.findall(str(val)):
+                    own.add(normalize_email(em))
+        if self.imap_user and "@" in str(self.imap_user):
+            own.add(normalize_email(str(self.imap_user)))
+        if own_addresses:
+            own.update(normalize_email(a) for a in own_addresses if a)
+        self.own_addresses: Set[str] = {a for a in own if a}
 
         # Microsoft Graph Token Cache (TTL-gepuffert)
         self._graph_token: Optional[str] = None
@@ -292,6 +445,9 @@ class InboundMailCrawler:
             list_unsub_post = raw_input.get("list_unsubscribe_post") or raw_input.get("List-Unsubscribe-Post") or ""
             precedence = raw_input.get("precedence") or raw_input.get("Precedence") or ""
             auto_submitted = raw_input.get("auto_submitted") or raw_input.get("Auto-Submitted") or ""
+            content_type = raw_input.get("content_type") or raw_input.get("Content-Type") or ""
+            x_failed = raw_input.get("x_failed_recipients") or raw_input.get("X-Failed-Recipients") or ""
+            dsn_text = raw_input.get("dsn_text") or ""
 
             if not message_id:
                 hash_input = f"{sender_email}_{subj}_{date_str}_{body[:100]}".encode("utf-8")
@@ -316,6 +472,9 @@ class InboundMailCrawler:
                 "list_unsubscribe_post": str(list_unsub_post).strip(),
                 "precedence": str(precedence).strip(),
                 "auto_submitted": str(auto_submitted).strip(),
+                "content_type": str(content_type).strip(),
+                "x_failed_recipients": str(x_failed).strip(),
+                "dsn_text": str(dsn_text),
             }
 
         # Falls RFC 822 Bytes oder String
@@ -348,6 +507,9 @@ class InboundMailCrawler:
         list_unsub_post = decode_mime_header(msg.get("List-Unsubscribe-Post", "")).strip()
         precedence = decode_mime_header(msg.get("Precedence", "")).strip()
         auto_submitted = decode_mime_header(msg.get("Auto-Submitted", "")).strip()
+        content_type = str(msg.get("Content-Type", "") or "").strip()
+        x_failed = decode_mime_header(msg.get("X-Failed-Recipients", "")).strip()
+        dsn_text = _extract_dsn_text(msg)
 
         if not message_id:
             hash_input = f"{sender_email}_{subject}_{date_str}_{body[:100]}".encode("utf-8")
@@ -372,6 +534,9 @@ class InboundMailCrawler:
             "list_unsubscribe_post": list_unsub_post,
             "precedence": precedence,
             "auto_submitted": auto_submitted,
+            "content_type": content_type,
+            "x_failed_recipients": x_failed,
+            "dsn_text": dsn_text,
         }
 
     @staticmethod
@@ -510,6 +675,51 @@ class InboundMailCrawler:
     # Message Processing & CRM / Blacklist Update
     # -----------------------------------------------------------------------
 
+    def _handle_bounce(self, parsed: Dict[str, Any], bounce: Dict[str, Any]) -> Dict[str, Any]:
+        """Verarbeitet eine erkannte Bounce: Hard -> mark_bounced, Soft/Unknown -> nur loggen."""
+        msg_id = parsed["message_id"]
+        kind = bounce["kind"]
+        recipients = bounce["recipients"]
+        code = bounce["status_code"]
+        status = "BOUNCE_HARD" if kind == "HARD" else ("BOUNCE_SOFT" if kind == "SOFT" else "BOUNCE_UNKNOWN")
+        marked: List[str] = []
+
+        if kind == "HARD":
+            for rcpt in recipients:
+                try:
+                    self.storage.mark_bounced(
+                        rcpt,
+                        detail=f"DSN {code}: {parsed.get('subject', '')}"[:300],
+                        bounce_meta={
+                            "status_code": code,
+                            "message_id": msg_id,
+                            "reporter": parsed.get("from_email", ""),
+                            "signals": bounce["signals"],
+                        },
+                    )
+                    marked.append(rcpt)
+                except Exception as exc:  # pragma: no cover - defensiv
+                    logger.error("mark_bounced fehlgeschlagen fuer %s: %s", rcpt, exc)
+        else:
+            logger.info("Bounce (%s, %s) ohne Statuswechsel fuer %s", kind, code or "-", recipients)
+
+        self.mark_processed(msg_id, details={
+            "status": status,
+            "from": parsed.get("from_email", ""),
+            "subject": parsed.get("subject", ""),
+            "status_code": code,
+            "recipients": recipients,
+        })
+        return {
+            "status": status,
+            "message_id": msg_id,
+            "from_email": parsed.get("from_email", ""),
+            "status_code": code,
+            "recipients": recipients,
+            "marked_bounced": marked,
+            "skipped": True,
+        }
+
     def process_message(
         self,
         raw_msg: Union[Dict[str, Any], email.message.Message, str, bytes]
@@ -532,6 +742,15 @@ class InboundMailCrawler:
                 "from_email": parsed["from_email"],
                 "skipped": True,
             }
+
+        # 1a. Bounce-/DSN-Erkennung (vor Newsletter-Filter, da DSNs oft Auto-Submitted tragen)
+        bounce = detect_bounce(
+            parsed,
+            own_addresses=self.own_addresses,
+            is_known_lead=lambda addr: self.storage.get_lead(addr) is not None,
+        )
+        if bounce is not None:
+            return self._handle_bounce(parsed, bounce)
 
         # 1b. Newsletter- und Automated-Header-Filter (Schutz vor False-Positive Opt-Outs durch News-Footer)
         if self.is_automated_or_newsletter(parsed):
@@ -628,19 +847,27 @@ class InboundMailCrawler:
         snippet = classification.clean_text[:300].strip()
 
         # 4. CRM Status & Blacklist aktualisieren
-        if classification.intent == Intent.NEGATIVE_OPTOUT:
+        _pre_lead = self.storage.get_lead(target_email) or {}
+        lead_is_terminal = _pre_lead.get("status") in TERMINAL_STATUSES
+        if lead_is_terminal and classification.intent != Intent.NEGATIVE_OPTOUT:
+            # Terminale Leads (BOUNCED / LOST_BLACKLISTED) werden nie reaktiviert.
+            logger.info("Inbound von terminalem Lead %s (%s) - Status bleibt.", target_email, _pre_lead.get("status"))
+        elif classification.intent == Intent.NEGATIVE_OPTOUT:
             # Goldene Regel: Sofortige permanente Blacklistierung
             self.blacklist_mgr.add_to_blacklist(
                 target_email,
                 reason=classification.reason,
                 snippet=snippet
             )
-            self.storage.update_lead_status(
-                target_email,
-                LeadStatus.LOST_BLACKLISTED,
-                reason=classification.reason,
-                snippet=snippet
-            )
+            try:
+                self.storage.update_lead_status(
+                    target_email,
+                    LeadStatus.LOST_BLACKLISTED,
+                    reason=classification.reason,
+                    snippet=snippet
+                )
+            except TerminalStatusTransitionError:
+                pass  # BOUNCED bleibt BOUNCED; Blacklist-Eintrag ist bereits gesetzt.
             # Telegram-Push fuer Opt-Out (Goldene Regel)
             try:
                 from scripts.crm.telegram_bot import get_default_bot
@@ -668,7 +895,7 @@ class InboundMailCrawler:
         draft_id = None
 
         # Falls auto_draft aktiv: Safety Gate Engine & Response Drafter anstossen
-        if self.auto_draft and self.engine and self.drafter and classification.intent == Intent.POSITIVE_TEST_REQUEST:
+        if self.auto_draft and self.engine and self.drafter and not lead_is_terminal and classification.intent == Intent.POSITIVE_TEST_REQUEST:
             try:
                 audit_report = self.engine.run_audit(text=parsed["body"])
                 lead_data = active_lead or {"email": target_email}
@@ -909,6 +1136,8 @@ class InboundMailCrawler:
                                         header_map[str(h.get("name", "")).lower()] = str(h.get("value", "")).strip()
 
                             msg_dict = {
+                                "content_type": header_map.get("content-type", ""),
+                                "x_failed_recipients": header_map.get("x-failed-recipients", ""),
                                 "from": from_raw,
                                 "to": to_str,
                                 "subject": msg.get("subject", ""),

@@ -8,6 +8,7 @@ Erlaubte Status-Werte fuer Leads:
 - REPLIED_POSITIVE
 - REPLIED_INQUIRY
 - LOST_BLACKLISTED
+- BOUNCED (permanenter Hard-Bounce, 5.x.x -> automatisch Blacklist, terminal)
 
 Setzt die Goldene Regel um:
 Sobald eine Adresse blacklisted wird (oder Status LOST_BLACKLISTED erhaelt),
@@ -41,7 +42,35 @@ class LeadStatus:
     REPLIED_INQUIRY = "REPLIED_INQUIRY"
     LOST_BLACKLISTED = "LOST_BLACKLISTED"
     CHANNEL_RESTRICTED = "CHANNEL_RESTRICTED"
+    BOUNCED = "BOUNCED"
 
+
+# Status, fuer die can_contact() dauerhaft False liefert.
+NON_CONTACTABLE_STATUSES = frozenset({
+    LeadStatus.LOST_BLACKLISTED,
+    LeadStatus.CHANNEL_RESTRICTED,
+    LeadStatus.BOUNCED,
+})
+
+# Terminale Status: von hier aus ist kein Rueckweg in einen kontaktierbaren
+# Status erlaubt (nur gleicher Status oder LOST_BLACKLISTED -> BOUNCED).
+TERMINAL_STATUSES = frozenset({
+    LeadStatus.LOST_BLACKLISTED,
+    LeadStatus.BOUNCED,
+})
+
+_ALLOWED_TERMINAL_TRANSITIONS = frozenset({
+    (LeadStatus.LOST_BLACKLISTED, LeadStatus.BOUNCED),
+})
+
+
+class TerminalStatusTransitionError(ValueError):
+    """Geworfen bei Versuch, einen Lead aus einem terminalen Status zu holen."""
+    pass
+
+
+# Blacklist-Grund fuer Hard-Bounces.
+BOUNCE_BLACKLIST_REASON = "bounce"
 
 VALID_LEAD_STATUSES = {
     LeadStatus.NOT_SENT,
@@ -51,6 +80,7 @@ VALID_LEAD_STATUSES = {
     LeadStatus.REPLIED_INQUIRY,
     LeadStatus.LOST_BLACKLISTED,
     LeadStatus.CHANNEL_RESTRICTED,
+    LeadStatus.BOUNCED,
 }
 
 
@@ -251,7 +281,7 @@ class CRMStorage:
             return False
 
         lead = self.get_lead(norm_email)
-        if lead and lead.get("status") in (LeadStatus.LOST_BLACKLISTED, LeadStatus.CHANNEL_RESTRICTED):
+        if lead and lead.get("status") in NON_CONTACTABLE_STATUSES:
             return False
 
         return True
@@ -328,6 +358,17 @@ class CRMStorage:
 
         now_iso = datetime.now(timezone.utc).isoformat()
         lead = self.get_lead(norm_email)
+        if lead:
+            current = lead.get("status")
+            if (
+                current in TERMINAL_STATUSES
+                and status != current
+                and (current, status) not in _ALLOWED_TERMINAL_TRANSITIONS
+            ):
+                raise TerminalStatusTransitionError(
+                    f"Lead '{norm_email}' ist im terminalen Status '{current}'; "
+                    f"Wechsel zu '{status}' ist nicht erlaubt."
+                )
         if not lead:
             lead = {
                 "email": norm_email,
@@ -361,6 +402,62 @@ class CRMStorage:
                 snippet=snippet
             )
 
+        # Hard-Bounce -> Adresse existiert nicht/ist dauerhaft unzustellbar.
+        # Permanente Blacklistierung mit Grund 'bounce' (Details im Snippet).
+        if status == LeadStatus.BOUNCED:
+            detail = reason if reason and reason != BOUNCE_BLACKLIST_REASON else ""
+            self.blacklist_mgr.add_to_blacklist(
+                norm_email,
+                reason=BOUNCE_BLACKLIST_REASON,
+                snippet=(snippet or detail),
+            )
+
+        self.save()
+        return lead
+
+    def update_status(
+        self,
+        lead_id: str,
+        status: str,
+        reason: str = "",
+        snippet: str = ""
+    ) -> Dict[str, Any]:
+        """Alias fuer update_lead_status (lead_id == normalisierte E-Mail-Adresse)."""
+        return self.update_lead_status(lead_id, status, reason=reason, snippet=snippet)
+
+    def mark_bounced(
+        self,
+        email: str,
+        detail: str = "",
+        bounce_meta: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """
+        Markiert einen Lead als BOUNCED (Hard-Bounce), blacklistet ihn mit
+        Grund 'bounce' und schreibt einen BOUNCE_RECORDED History-Eintrag.
+        Idempotent: Ist der Lead bereits BOUNCED, wird nur ein weiterer
+        History-Eintrag ergaenzt, kein doppelter Statuswechsel.
+        """
+        norm_email = normalize_email(email)
+        if not norm_email:
+            raise ValueError("Email address cannot be empty.")
+
+        lead = self.get_lead(norm_email)
+        if not lead or lead.get("status") != LeadStatus.BOUNCED:
+            lead = self.update_lead_status(
+                norm_email, LeadStatus.BOUNCED, reason=detail, snippet=detail
+            )
+        elif not self.blacklist_mgr.is_blacklisted(norm_email):
+            self.blacklist_mgr.add_to_blacklist(
+                norm_email, reason=BOUNCE_BLACKLIST_REASON, snippet=detail
+            )
+
+        lead.setdefault("history", []).append({
+            "action": "BOUNCE_RECORDED",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "detail": detail,
+            "bounce": dict(bounce_meta or {}),
+        })
+        lead["updated_at"] = datetime.now(timezone.utc).isoformat()
         self.save()
         return lead
 
@@ -422,6 +519,11 @@ class CRMStorage:
         for email, lead in self._leads.items():
             current_status = lead.get("status")
 
+            # 0. Hard-Bounces bleiben terminal BOUNCED
+            if current_status == LeadStatus.BOUNCED:
+                kept_lost_blacklisted += 1
+                continue
+
             # 1. Geblockte Leads bleiben unangetastet (Goldene Regel)
             if current_status == LeadStatus.LOST_BLACKLISTED or self.blacklist_mgr.is_blacklisted(email):
                 lead["status"] = LeadStatus.LOST_BLACKLISTED
@@ -476,6 +578,19 @@ def update_lead_status(
     snippet: str = ""
 ) -> Dict[str, Any]:
     return get_default_storage().update_lead_status(email, status, reason=reason, snippet=snippet)
+
+
+def update_status(
+    lead_id: str,
+    status: str,
+    reason: str = "",
+    snippet: str = ""
+) -> Dict[str, Any]:
+    return get_default_storage().update_status(lead_id, status, reason=reason, snippet=snippet)
+
+
+def mark_bounced(email: str, detail: str = "", bounce_meta: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    return get_default_storage().mark_bounced(email, detail=detail, bounce_meta=bounce_meta)
 
 
 def list_leads(status: Optional[str] = None) -> List[Dict[str, Any]]:

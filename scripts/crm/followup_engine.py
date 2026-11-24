@@ -55,6 +55,7 @@ from scripts.crm.review_queue import (
     get_default_queue,
 )
 from scripts.crm.storage import (
+    TERMINAL_STATUSES,
     CRMStorage,
     LeadStatus,
     get_default_storage,
@@ -314,6 +315,14 @@ class ColdOutreachJurisdictionGate:
             lead = lead_or_email
             email = normalize_email(lead.get("email", ""))
 
+        # Terminal-Guard: BOUNCED / LOST_BLACKLISTED niemals ueberschreiben.
+        stored = self.storage.get_lead(email) if email else None
+        current_status = (stored or {}).get("status") or lead.get("status")
+        if current_status in TERMINAL_STATUSES:
+            raise BlacklistedRecipientError(
+                f"Lead '{email}' ist terminal ({current_status}); kein LinkedIn-Routing."
+            )
+
         company = lead.get("company", "") or lead.get("company_name", "")
         country = lead.get("country", "") or country_code
         linkedin_url = self.generate_linkedin_search_url(company)
@@ -358,6 +367,12 @@ class ColdOutreachJurisdictionGate:
         Prueft und erzwingt das Gate fuer einen einzelnen Empfaenger.
         Falls gesperrt: erzeugt LinkedInTask und setzt CHANNEL_RESTRICTED.
         """
+        existing = self.storage.get_lead(normalize_email(email))
+        if existing and existing.get("status") in TERMINAL_STATUSES:
+            raise BlacklistedRecipientError(
+                f"Lead '{email}' ist terminal ({existing.get('status')}); Status bleibt unveraendert."
+            )
+
         is_restricted, code, basis = self.check_jurisdiction(email, country)
         if not is_restricted or not code or not basis:
             return False, None
@@ -694,6 +709,7 @@ class FollowUpEngine:
         im CRMStorage atomar auf FOLLOWUP_SENT.
         
         Hard-Gates:
+        0. Terminal-Status (BOUNCED / LOST_BLACKLISTED) und can_contact().
         1. Jurisdiction Gate (AT / PL strikt blockiert mit ColdOutreachJurisdictionError).
         2. Blacklist-Schutz (Goldene Regel).
         3. Status APPROVED in Queue.
@@ -709,9 +725,18 @@ class FollowUpEngine:
         recipient = normalize_email(draft.get("lead_email") or draft.get("recipient", ""))
 
         # -------------------------------------------------------------------
-        # Hard-Gate 1: Jurisdiction Check (AT / PL)
+        # Hard-Gate 0: Terminal-Status / Kontaktierbarkeit (BOUNCED, Blacklist)
         # -------------------------------------------------------------------
         lead = self.storage.get_lead(recipient) or {}
+        if lead.get("status") in TERMINAL_STATUSES or not self.storage.can_contact(recipient):
+            raise BlacklistedRecipientError(
+                f"Versand an '{recipient}' blockiert: Status '{lead.get('status')}' "
+                f"bzw. nicht kontaktierbar."
+            )
+
+        # -------------------------------------------------------------------
+        # Hard-Gate 1: Jurisdiction Check (AT / PL)
+        # -------------------------------------------------------------------
         country = lead.get("country", "")
         is_restricted, code, basis = self.jurisdiction_gate.check_jurisdiction(recipient, country)
         if is_restricted and code and basis:
