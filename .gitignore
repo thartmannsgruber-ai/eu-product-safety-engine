@@ -15,3 +15,4 @@ dist/
 .crm/
 __pycache__/
 *.pyc
+.venv/
